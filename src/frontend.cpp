@@ -37,18 +37,9 @@ public:
 
         dvb_diseqc_master_cmd cmd = {0};
 
-        if (repeat == 1)
-        {
-            ::memcpy(cmd.msg, message, 3);
+        cmd.msg_len = (repeat == 1) ? 3 : 4;
 
-            cmd.msg_len = 3;
-        }
-        else
-        {
-            ::memcpy(cmd.msg, message, 4);
-
-            cmd.msg_len = 6;
-        }
+        ::memcpy(cmd.msg, message, cmd.msg_len);
 
         return ::ioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd);
     }
