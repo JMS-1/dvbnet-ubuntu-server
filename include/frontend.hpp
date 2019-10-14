@@ -1,3 +1,8 @@
+#ifndef _DVBNET_FRONTEND_H
+#define _DVBNET_FRONTEND_H 1
+
+#include <thread>
+
 #include <linux/dvb/frontend.h>
 #include <linux/dvb/dmx.h>
 
@@ -6,22 +11,32 @@ class Frontend;
 class Filter
 {
 protected:
-    Filter(Frontend &frontend, __u16 pid) : _frontend(frontend), _connected(true), _pid(pid), _fd(-1) {}
+    Filter(Frontend &frontend, __u16 pid) : _frontend(frontend), _connected(true), _pid(pid), _fd(-1), _thread(nullptr) {}
 
 public:
-    virtual ~Filter() { _connected = false; }
+    virtual ~Filter()
+    {
+        _connected = false;
+
+        stop();
+    }
 
 private:
     bool _connected;
     Frontend &_frontend;
+    std::thread *_thread;
 
 protected:
     const __u16 _pid;
     int _fd;
 
+protected:
+    std::thread *startThread(const char *path, int bufsize, int limit);
+    bool open();
+
 public:
-    virtual void start() = 0;
-    virtual void stop() = 0;
+    virtual bool start() = 0;
+    virtual void stop();
 };
 
 class Frontend
@@ -53,38 +68,4 @@ public:
     int tune();
 };
 
-class SectionFilter : public Filter
-{
-    friend class Frontend;
-
-private:
-    SectionFilter(Frontend &frontend, __u16 pid) : Filter(frontend, pid) {}
-
-public:
-    ~SectionFilter()
-    {
-        stop();
-    }
-
-public:
-    void start();
-    void stop();
-};
-
-class StreamFilter : public Filter
-{
-    friend class Frontend;
-
-private:
-    StreamFilter(Frontend &frontend, __u16 pid) : Filter(frontend, pid) {}
-
-public:
-    ~StreamFilter()
-    {
-        stop();
-    }
-
-public:
-    void start();
-    void stop();
-};
+#endif
