@@ -3,17 +3,17 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-void streamToFile(int fd, const char *target, int bufsize, int limit)
+void Filter::feeder()
 {
-    auto dump = ::open(target, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
+    auto dump = ::open(_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 
     ssize_t total = 0;
 
-    auto buffer = ::malloc(bufsize);
+    auto buffer = ::malloc(_bufsize);
 
-    while (total < limit)
+    while (total < _limit)
     {
-        auto bytes = ::read(fd, buffer, bufsize);
+        auto bytes = ::read(_fd, buffer, _bufsize);
 
         if (bytes <= 0)
         {
@@ -59,19 +59,23 @@ bool Filter::open()
 {
     stop();
 
-    _fd = ::open("/dev/dvb/adapter0/demux0", O_RDWR);
+    char path[40];
+
+    ::sprintf(path, "/dev/dvb/adapter%i/demux%i", _frontend.adapter, _frontend.frontend);
+
+    _fd = ::open(path, O_RDWR);
 
     return _fd >= 0;
 }
 
-std::thread *Filter::startThread(const char *path, int bufsize, int limit)
+std::thread *Filter::startThread()
 {
     if (_thread)
     {
         return _thread;
     }
 
-    _thread = new std::thread(streamToFile, _fd, path, bufsize, limit);
+    _thread = new std::thread(&Filter::feeder, this);
 
     return _thread;
 }

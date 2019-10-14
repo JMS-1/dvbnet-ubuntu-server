@@ -11,7 +11,17 @@ class Frontend;
 class Filter
 {
 protected:
-    Filter(Frontend &frontend, __u16 pid) : _frontend(frontend), _connected(true), _pid(pid), _fd(-1), _thread(nullptr) {}
+    Filter(Frontend &frontend, __u16 pid, const char *path, int bufsize, int limit)
+        : _bufsize(bufsize),
+          _connected(true),
+          _fd(-1),
+          _limit(limit),
+          _path(path),
+          _pid(pid),
+          _thread(nullptr),
+          _frontend(frontend)
+    {
+    }
 
 public:
     virtual ~Filter()
@@ -25,13 +35,19 @@ private:
     bool _connected;
     Frontend &_frontend;
     std::thread *_thread;
+    const char *_path;
+    const int _bufsize;
+    const int _limit;
+
+private:
+    void feeder();
 
 protected:
     const __u16 _pid;
     int _fd;
 
 protected:
-    std::thread *startThread(const char *path, int bufsize, int limit);
+    std::thread *startThread();
     bool open();
 
 public:
@@ -42,7 +58,7 @@ public:
 class Frontend
 {
 public:
-    Frontend(int adapter, int frontend) : _adapter(adapter), _frontend(frontend), _fd(-1)
+    Frontend(int adapter, int frontend) : adapter(adapter), frontend(frontend), _fd(-1)
     {
     }
 
@@ -52,9 +68,11 @@ public:
     }
 
 private:
-    const int _adapter;
-    const int _frontend;
     int _fd;
+
+public:
+    const int adapter;
+    const int frontend;
 
 public:
     const bool isOpen() { return _fd >= 0; }

@@ -25,7 +25,11 @@ bool Frontend::open()
 {
     close();
 
-    _fd = ::open("/dev/dvb/adapter0/frontend0", O_RDWR);
+    char path[40];
+
+    ::sprintf(path, "/dev/dvb/adapter%i/frontend%i", adapter, frontend);
+
+    _fd = ::open(path, O_RDWR);
 
     if (_fd < 0)
     {
