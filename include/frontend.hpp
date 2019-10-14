@@ -49,6 +49,7 @@ public:
     bool open();
     const fe_status getStatus();
     Filter &createSectionFilter(__u16 pid);
+    Filter &createStreamFilter(__u16 pid);
     int tune();
 };
 
@@ -61,6 +62,24 @@ private:
 
 public:
     ~SectionFilter()
+    {
+        stop();
+    }
+
+public:
+    void start();
+    void stop();
+};
+
+class StreamFilter : public Filter
+{
+    friend class Frontend;
+
+private:
+    StreamFilter(Frontend &frontend, __u16 pid) : Filter(frontend, pid) {}
+
+public:
+    ~StreamFilter()
     {
         stop();
     }

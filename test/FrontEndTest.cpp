@@ -19,9 +19,8 @@ BOOST_AUTO_TEST_CASE(AdditionTest)
 
     BOOST_CHECK_EQUAL(frontend.getStatus(), 31);
 
-    auto &filter = frontend.createSectionFilter(18);
-
-    filter.start();
+    frontend.createSectionFilter(18).start();
+    frontend.createStreamFilter(168).start();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -173,33 +173,26 @@ Filter &Frontend::createSectionFilter(__u16 pid)
     return *new SectionFilter(*this, pid);
 }
 
-void SectionFilter::stop()
+Filter &Frontend::createStreamFilter(__u16 pid)
 {
-    if (_fd < 0)
-    {
-        return;
-    }
-
-    close(_fd);
-
-    _fd = -1;
+    return *new StreamFilter(*this, pid);
 }
 
-void onThread(int fd)
+void streamToFile(int fd, const char *target, int bufsize, int limit)
 {
-    auto dump = ::open("dump.epg", O_WRONLY | O_CREAT | O_TRUNC);
+    auto dump = ::open(target, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 
     ssize_t total = 0;
 
-    __u8 buffer[1000];
+    auto buffer = ::malloc(bufsize);
 
-    while (total < 2000000)
+    while (total < limit)
     {
-        auto bytes = ::read(fd, buffer, sizeof(buffer));
+        auto bytes = ::read(fd, buffer, bufsize);
 
         if (bytes <= 0)
         {
-            throw "no EPG data";
+            return;
         }
 
         ::write(dump, buffer, bytes);
@@ -210,6 +203,18 @@ void onThread(int fd)
     ::close(dump);
 
     ::printf("total %ld\n", total);
+}
+
+void SectionFilter::stop()
+{
+    if (_fd < 0)
+    {
+        return;
+    }
+
+    close(_fd);
+
+    _fd = -1;
 }
 
 void SectionFilter::start()
@@ -224,10 +229,10 @@ void SectionFilter::start()
     }
 
     dmx_sct_filter_params filter = {
-        .pid = _pid,
-        .filter = {0},
-        .timeout = 0,
-        .flags = DMX_IMMEDIATE_START | DMX_CHECK_CRC};
+        _pid,
+        {0},
+        0,
+        DMX_IMMEDIATE_START | DMX_CHECK_CRC};
 
     auto pid_error = ::ioctl(_fd, DMX_SET_FILTER, &filter);
 
@@ -236,7 +241,56 @@ void SectionFilter::start()
         throw "unable to register filter";
     }
 
-    std::thread reader(onThread, _fd);
+    std::thread reader(streamToFile, _fd, "dump.epg", 1000, 200000);
+
+    reader.join();
+}
+
+void StreamFilter::stop()
+{
+    if (_fd < 0)
+    {
+        return;
+    }
+
+    close(_fd);
+
+    _fd = -1;
+}
+
+void StreamFilter::start()
+{
+    stop();
+
+    _fd = ::open("/dev/dvb/adapter0/demux0", O_RDWR);
+
+    if (_fd < 0)
+    {
+        throw "unable to create filter";
+    }
+
+    auto buf_error = ::ioctl(_fd, DMX_SET_BUFFER_SIZE, 500 * 1024);
+
+    if (buf_error != 0)
+    {
+        throw "unable to configure streaming buffer filter";
+    }
+
+    dmx_pes_filter_params filter = {
+        _pid,
+        dmx_input::DMX_IN_FRONTEND,
+        dmx_output::DMX_OUT_TAP,
+        dmx_ts_pes::DMX_PES_OTHER,
+        DMX_IMMEDIATE_START};
+
+    auto pid_error = ::ioctl(_fd, DMX_SET_PES_FILTER, &filter);
+
+    if (pid_error != 0)
+    {
+        throw "unable to register filter";
+    }
+
+    std::thread reader(streamToFile, _fd, "dump.vid", 10000, 2000000);
 
     reader.join();
 }
