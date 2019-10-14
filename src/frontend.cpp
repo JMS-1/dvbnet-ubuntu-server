@@ -6,6 +6,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include <cerrno>
+#include <thread>
+
 enum diseqc_modes
 {
     burst_off,
@@ -96,7 +99,16 @@ bool Frontend::open()
 
     _fd = ::open("/dev/dvb/adapter0/frontend0", O_RDWR);
 
-    return (_fd >= 0);
+    if (_fd < 0)
+    {
+        return false;
+    }
+
+    dvb_frontend_info info;
+
+    ::ioctl(_fd, FE_GET_INFO, &info);
+
+    return true;
 }
 
 const fe_status Frontend::getStatus()
@@ -135,14 +147,96 @@ int Frontend::tune()
     struct dtv_property props[] =
         {
             {DTV_DELIVERY_SYSTEM, {0}, fe_delivery_system::SYS_DVBS},
-            {DTV_FREQUENCY, {0}, 1218750},
+            {DTV_FREQUENCY, {0}, 12187500 - 10600000},
+            {DTV_INNER_FEC, {0}, fe_code_rate::FEC_3_4},
             {DTV_MODULATION, {0}, fe_modulation::QPSK},
             {DTV_SYMBOL_RATE, {0}, 27500000},
-            {DTV_INNER_FEC, {0}, fe_code_rate::FEC_3_4},
-            {DTV_TUNE}};
+            {DTV_TUNE, {0}, 0}};
 
     struct dtv_properties dtv_prop = {
         .num = sizeof(props) / sizeof(props[0]), .props = props};
 
-    return ::ioctl(_fd, FE_SET_PROPERTY, &dtv_prop);
+    auto tune_error = ::ioctl(_fd, FE_SET_PROPERTY, &dtv_prop);
+
+    if (tune_error != 0)
+    {
+        printf("%d\n", errno);
+
+        throw "unable to tune";
+    }
+
+    return 0;
+}
+
+Filter &Frontend::createSectionFilter(__u16 pid)
+{
+    return *new SectionFilter(*this, pid);
+}
+
+void SectionFilter::stop()
+{
+    if (_fd < 0)
+    {
+        return;
+    }
+
+    close(_fd);
+
+    _fd = -1;
+}
+
+void onThread(int fd)
+{
+    auto dump = ::open("dump.epg", O_WRONLY | O_CREAT | O_TRUNC);
+
+    ssize_t total = 0;
+
+    __u8 buffer[1000];
+
+    while (total < 2000000)
+    {
+        auto bytes = ::read(fd, buffer, sizeof(buffer));
+
+        if (bytes <= 0)
+        {
+            throw "no EPG data";
+        }
+
+        ::write(dump, buffer, bytes);
+
+        total += bytes;
+    }
+
+    ::close(dump);
+
+    ::printf("total %ld\n", total);
+}
+
+void SectionFilter::start()
+{
+    stop();
+
+    _fd = ::open("/dev/dvb/adapter0/demux0", O_RDWR);
+
+    if (_fd < 0)
+    {
+        throw "unable to create filter";
+    }
+
+    dmx_sct_filter_params filter = {
+        .pid = _pid,
+        .filter = {0},
+        .timeout = 0,
+        .flags = DMX_IMMEDIATE_START | DMX_CHECK_CRC};
+
+    auto pid_error = ::ioctl(_fd, DMX_SET_FILTER, &filter);
+
+    if (pid_error != 0)
+    {
+        throw "unable to register filter";
+    }
+
+    std::thread reader(onThread, _fd);
+
+    reader.join();
 }

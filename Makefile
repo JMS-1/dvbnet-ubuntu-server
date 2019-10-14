@@ -10,7 +10,7 @@ LIB_FNAME = $(BUILDDIR)/frontend.a
 TEST_FNAME = $(BUILDDIR)/test_main
  
 CXXFLAGS += $(INCDIRS:%=-I%) -std=c++1y -DDEBUG -g
-LDFLAGS += $(LIB_FNAME) -lboost_unit_test_framework
+LDFLAGS += $(LIB_FNAME) -lboost_unit_test_framework -pthread
  
 .PHONY: all clean
  
