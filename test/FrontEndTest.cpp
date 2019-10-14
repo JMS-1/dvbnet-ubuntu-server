@@ -13,6 +13,11 @@ BOOST_AUTO_TEST_CASE(AdditionTest)
 
     BOOST_CHECK_EQUAL(Frontend.open(), true);
     BOOST_CHECK_EQUAL(Frontend.getStatus(), fe_status::FE_NONE);
+    BOOST_CHECK_EQUAL(Frontend.tune(), 0);
+
+    ::sleep(1);
+
+    BOOST_CHECK_EQUAL(Frontend.getStatus() & fe_status::FE_HAS_SIGNAL, fe_status::FE_HAS_SIGNAL);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

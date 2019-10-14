@@ -24,4 +24,5 @@ public:
     const fe_status getStatus();
     bool close();
     bool open();
+    int tune();
 };
