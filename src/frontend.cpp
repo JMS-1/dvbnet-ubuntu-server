@@ -1,11 +1,11 @@
 #include "frontend.hpp"
 #include "diseqc.hpp"
+#include "sectionFilter.hpp"
+#include "streamFilter.hpp"
 
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
-
-#include "sectionFilter.cpp"
-#include "streamFilter.cpp"
 
 bool Frontend::close()
 {
