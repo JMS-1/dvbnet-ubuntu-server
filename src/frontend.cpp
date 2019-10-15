@@ -1,9 +1,9 @@
 #include "frontend.hpp"
+#include "diseqc.hpp"
 
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "diseqc.cpp"
 #include "sectionFilter.cpp"
 #include "streamFilter.cpp"
 
