@@ -5,21 +5,20 @@
 
 #include <linux/types.h>
 
-class Frontend;
+#include "frontend.hpp"
 
 class Filter
 {
     friend class Frontend;
 
 protected:
-    Filter(Frontend &frontend, __u16 pid, int bufsize, const char *path)
-        : _bufsize(bufsize),
-          _connected(true),
+    Filter(Frontend &frontend, __u16 pid, frontend_response type)
+        : _connected(true),
           _fd(-1),
-          _path(path),
+          _frontend(frontend),
           _pid(pid),
           _thread(nullptr),
-          _frontend(frontend)
+          _type(type)
     {
     }
 
@@ -35,8 +34,7 @@ private:
     bool _connected;
     Frontend &_frontend;
     std::thread *_thread;
-    const char *_path;
-    const int _bufsize;
+    const frontend_response _type;
 
 private:
     void feeder();

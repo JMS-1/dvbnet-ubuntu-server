@@ -6,25 +6,19 @@
 
 void Filter::feeder()
 {
-    auto dump = ::open(_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
-    auto buffer = ::malloc(_bufsize);
+    auto bufsize = _type == frontend_response::section ? 1000 : 10000;
+    auto buffer = ::malloc(bufsize);
 
-    for (ssize_t total = 0;;)
+    for (;;)
     {
-        auto bytes = ::read(_fd, buffer, _bufsize);
+        auto bytes = ::read(_fd, buffer, bufsize);
 
         if (bytes <= 0)
         {
-            ::close(dump);
-
-            ::printf("total %ld\n", total);
-
             return;
         }
 
-        ::write(dump, buffer, bytes);
-
-        total += bytes;
+        _frontend.sendResponse(_type, _pid, buffer, bytes);
     }
 }
 

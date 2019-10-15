@@ -4,11 +4,11 @@
 #include <linux/dvb/frontend.h>
 
 #include <map>
+#include <thread>
 
 #include "diseqc.hpp"
-#include "filter.hpp"
 
-class Frontend;
+class Filter;
 
 struct SatelliteTune
 {
@@ -35,10 +35,19 @@ struct Signal
     fe_status_t status;
 };
 
+enum frontend_response
+{
+    signal = 0,
+    section = 1,
+    stream = 2,
+};
+
 class Frontend
 {
+    friend class Filter;
+
 public:
-    Frontend(int adapter, int frontend) : adapter(adapter), frontend(frontend), _fd(-1), _status(nullptr), _signal({0})
+    Frontend(int adapter, int frontend) : adapter(adapter), frontend(frontend), _fd(-1), _status(nullptr)
     {
     }
 
@@ -51,10 +60,10 @@ private:
     std::map<__u16, Filter *> _filters;
     std::thread *_status;
     int _fd;
-    Signal _signal;
 
 private:
     void readStatus();
+    void sendResponse(frontend_response type, __u16 pid, const void *payload, int payloadSize);
 
 public:
     const int adapter;
@@ -66,7 +75,6 @@ public:
 public:
     bool open();
     bool tune(const SatelliteTune &transponder);
-    const Signal &getSignal() const { return _signal; }
     void close();
 
 public:

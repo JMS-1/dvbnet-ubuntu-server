@@ -2,20 +2,11 @@
 
 #include <unistd.h>
 
-void reportSignal(const Frontend &frontend)
-{
-    auto &signal = frontend.getSignal();
-
-    printf("status=%d strength=%d snr=%d ber=%d\n", signal.status, signal.strength, signal.snr, signal.ber);
-}
-
 int main()
 {
     Frontend frontend(0, 0);
 
     printf("open: %d\n", frontend.open());
-
-    reportSignal(frontend);
 
     SatelliteTune rtlplus = {
         .lnbMode = diseqc_modes::diseqc1,
@@ -36,14 +27,10 @@ int main()
 
     ::sleep(1);
 
-    reportSignal(frontend);
-
     frontend.createSectionFilter(18);
     printf("startFilter: %d\n", frontend.startFilter(18));
 
     ::sleep(5);
-
-    reportSignal(frontend);
 
     printf("removeFilter: %d\n", frontend.removeFilter(18));
 
@@ -51,8 +38,6 @@ int main()
     printf("startFilter: %d\n", frontend.startFilter(168));
 
     ::sleep(10);
-
-    reportSignal(frontend);
 
     printf("done\n");
 }

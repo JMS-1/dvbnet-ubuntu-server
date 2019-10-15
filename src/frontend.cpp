@@ -36,29 +36,37 @@ void Frontend::close()
     }
 }
 
+void Frontend::sendResponse(frontend_response type, __u16 pid, const void *payload, int payloadSize)
+{
+}
+
 void Frontend::readStatus()
 {
     for (;; ::sleep(5))
     {
-        if (::ioctl(_fd, FE_READ_STATUS, &_signal.status) != 0)
+        Signal signal = {0};
+
+        if (::ioctl(_fd, FE_READ_STATUS, &signal.status) != 0)
         {
             break;
         }
 
-        if (::ioctl(_fd, FE_READ_SIGNAL_STRENGTH, &_signal.strength) != 0)
+        if (::ioctl(_fd, FE_READ_SIGNAL_STRENGTH, &signal.strength) != 0)
         {
             break;
         }
 
-        if (::ioctl(_fd, FE_READ_SNR, &_signal.snr) != 0)
+        if (::ioctl(_fd, FE_READ_SNR, &signal.snr) != 0)
         {
             break;
         }
 
-        if (::ioctl(_fd, FE_READ_BER, &_signal.ber) != 0)
+        if (::ioctl(_fd, FE_READ_BER, &signal.ber) != 0)
         {
             break;
         }
+
+        sendResponse(frontend_response::signal, 0, &signal, sizeof(signal));
     }
 }
 
