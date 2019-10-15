@@ -1,3 +1,4 @@
+#include "filter.hpp"
 #include "frontend.hpp"
 
 #include <fcntl.h>

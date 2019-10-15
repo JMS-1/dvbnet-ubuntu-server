@@ -1,5 +1,6 @@
-#include "frontend.hpp"
+#include "filter.hpp"
 
+#include <linux/dvb/dmx.h>
 #include <sys/ioctl.h>
 
 class StreamFilter : public Filter

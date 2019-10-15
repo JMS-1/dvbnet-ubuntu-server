@@ -1,3 +1,6 @@
+#ifndef _DVBNET_DISEQC_H
+#define _DVBNET_DISEQC_H 1
+
 #include <linux/types.h>
 
 enum diseqc_modes
@@ -27,3 +30,5 @@ public:
 public:
     static DiSEqCMessage create(diseqc_modes mode, bool highFrequency, bool horizontal);
 };
+
+#endif
