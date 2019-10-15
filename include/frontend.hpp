@@ -27,7 +27,30 @@ struct SatelliteTune
     fe_rolloff rolloff;
 };
 
-struct Signal
+enum frontend_request
+{
+    add_section_filter = 0,
+    add_stream_filter = 1,
+    connect_adapter = 2,
+    del_all_filters = 3,
+    del_filter = 4,
+    tune = 5,
+};
+
+struct connect_request
+{
+    int adapter;
+    int frontend;
+};
+
+enum frontend_response
+{
+    section = 0,
+    signal = 1,
+    stream = 2,
+};
+
+struct signal_response
 {
     __u16 snr;
     __u16 strength;
@@ -35,59 +58,42 @@ struct Signal
     fe_status_t status;
 };
 
-enum frontend_response
-{
-    signal = 0,
-    section = 1,
-    stream = 2,
-};
-
 class FrontendManager;
 
 class Frontend
 {
     friend class Filter;
+    friend class FrontendManager;
 
 public:
-    Frontend(int adapter, int frontend, FrontendManager *manager)
-        : _fd(-1),
-          _manager(manager),
-          _status(nullptr),
-          adapter(adapter),
-          frontend(frontend)
-    {
-    }
-
+    Frontend(int tcp, FrontendManager *_manager);
     ~Frontend();
 
 private:
+    bool _active;
     FrontendManager *_manager;
-    std::map<__u16, Filter *> _filters;
-    std::thread *_status;
     int _fd;
+    int _tcp;
+    int adapter;
+    int frontend;
+    std::map<__u16, Filter *> _filters;
+    std::thread *_listener;
+    std::thread *_status;
 
 private:
     void readStatus();
     void sendResponse(frontend_response type, __u16 pid, const void *payload, int payloadSize);
-
-public:
-    const int adapter;
-    const int frontend;
-
-public:
-    const bool isOpen() { return _fd >= 0; }
-
-public:
-    bool open();
-    bool tune(const SatelliteTune &transponder);
-    void close();
-
-public:
-    void createSectionFilter(__u16 pid);
-    void createStreamFilter(__u16 pid);
-    bool startFilter(__u16 pid);
-    bool removeFilter(__u16 pid);
+    void waitRequest();
+    bool processConnect();
+    bool processTune();
+    bool processAddSection();
+    bool processAddStream();
+    bool processRemoveFilter();
+    bool processRemoveAllFilters();
+    void close(bool nowait);
+    void removeFilter(__u16 pid);
     void removeAllFilters();
+    void close();
 };
 
 #endif
