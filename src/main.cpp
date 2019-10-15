@@ -17,5 +17,3 @@ int main()
     frontend.createSectionFilter(18).start();
     frontend.createStreamFilter(168).start();
 }
-
-#define BOOST_TEST_MODULE FrontendTest
