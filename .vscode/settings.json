@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "map": "cpp",
-        "cstddef": "cpp"
+        "cstddef": "cpp",
+        "*.tcc": "cpp",
+        "fstream": "cpp"
     }
 }

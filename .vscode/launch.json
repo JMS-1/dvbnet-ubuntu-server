@@ -7,7 +7,7 @@
       "environment": [],
       "externalConsole": false,
       "name": "Debug",
-      "program": "${workspaceRoot}/build/test_main",
+      "program": "${workspaceRoot}/build/dvb_proxy",
       "request": "launch",
       "setupCommands": [
         {

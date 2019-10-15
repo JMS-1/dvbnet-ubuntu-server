@@ -1,31 +1,23 @@
 {
-  // See https://go.microsoft.com/fwlink/?LinkId=733558
-  // for the documentation about the tasks.json format
-  "version": "2.0.0",
   "tasks": [
     {
-        "label": "build",
-        "type": "shell",
-        "command": "make",
-        "problemMatcher": [
-            "$gcc"
-        ]
+      "command": "make",
+      "label": "build",
+      "problemMatcher": ["$gcc"],
+      "type": "shell"
     },
     {
-        "label": "clean",
-        "type": "shell",
-        "command": "make clean",
-        "problemMatcher": [
-            "$gcc"
-        ]
+      "command": "make clean",
+      "label": "clean",
+      "problemMatcher": [],
+      "type": "shell"
     },
     {
-        "label": "run tests",
-        "type": "shell",
-        "command": "make run_test",
-        "problemMatcher": [
-            "$gcc"
-        ]
+      "command": "build/dvb_proxy",
+      "label": "run",
+      "problemMatcher": [],
+      "type": "shell"
     }
-]
+  ],
+  "version": "2.0.0"
 }
