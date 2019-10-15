@@ -5,14 +5,40 @@
 
 #include <map>
 
+#include "diseqc.hpp"
 #include "filter.hpp"
 
 class Frontend;
 
+struct SatelliteTune
+{
+    diseqc_modes lnbMode;
+    __u32 lnb1;
+    __u32 lnb2;
+    __u32 lnbSwitch;
+    bool lnbPower;
+
+    fe_modulation modulation;
+    __u32 frequency;
+    __u32 symbolrate;
+    bool horizontal;
+    fe_code_rate innerFEC;
+    bool s2;
+    fe_rolloff rolloff;
+};
+
+struct Signal
+{
+    __u16 snr;
+    __u16 strength;
+    __u32 ber;
+    fe_status_t status;
+};
+
 class Frontend
 {
 public:
-    Frontend(int adapter, int frontend) : adapter(adapter), frontend(frontend), _fd(-1)
+    Frontend(int adapter, int frontend) : adapter(adapter), frontend(frontend), _fd(-1), _status(nullptr), _signal({0})
     {
     }
 
@@ -23,7 +49,12 @@ public:
 
 private:
     std::map<__u16, Filter *> _filters;
+    std::thread *_status;
     int _fd;
+    Signal _signal;
+
+private:
+    void readStatus();
 
 public:
     const int adapter;
@@ -34,8 +65,8 @@ public:
 
 public:
     bool open();
-    const fe_status getStatus();
-    bool tune();
+    bool tune(const SatelliteTune &transponder);
+    const Signal &getSignal() const { return _signal; }
     void close();
 
 public:

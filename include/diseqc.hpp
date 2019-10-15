@@ -5,13 +5,13 @@
 
 enum diseqc_modes
 {
-    burst_off,
-    burst_on,
-    diseqc1,
-    diseqc2,
-    diseqc3,
-    diseqc4,
-    none,
+    burst_off = 5,
+    burst_on = 6,
+    diseqc1 = 1,
+    diseqc2 = 2,
+    diseqc3 = 3,
+    diseqc4 = 4,
+    none = 0,
 };
 
 class DiSEqCMessage

@@ -1,5 +1,4 @@
 #include "frontend.hpp"
-#include "diseqc.hpp"
 #include "sectionFilter.hpp"
 #include "streamFilter.hpp"
 
@@ -21,6 +20,46 @@ void Frontend::close()
     removeAllFilters();
 
     ::close(fd);
+
+    auto status = _status;
+
+    if (!status)
+    {
+        return;
+    }
+
+    _status = nullptr;
+
+    if (status->joinable())
+    {
+        status->join();
+    }
+}
+
+void Frontend::readStatus()
+{
+    for (;; ::sleep(5))
+    {
+        if (::ioctl(_fd, FE_READ_STATUS, &_signal.status) != 0)
+        {
+            break;
+        }
+
+        if (::ioctl(_fd, FE_READ_SIGNAL_STRENGTH, &_signal.strength) != 0)
+        {
+            break;
+        }
+
+        if (::ioctl(_fd, FE_READ_SNR, &_signal.snr) != 0)
+        {
+            break;
+        }
+
+        if (::ioctl(_fd, FE_READ_BER, &_signal.ber) != 0)
+        {
+            break;
+        }
+    }
 }
 
 bool Frontend::open()
@@ -33,34 +72,30 @@ bool Frontend::open()
 
     _fd = ::open(path, O_RDWR);
 
-    return _fd >= 0;
-}
-
-const fe_status Frontend::getStatus()
-{
-    if (!isOpen())
+    if (_fd < 0)
     {
-        throw "frontend not open";
+        return false;
     }
 
-    fe_status status;
+    _status = new std::thread(&Frontend::readStatus, this);
 
-    if (::ioctl(_fd, FE_READ_STATUS, &status) < 0)
-    {
-        throw "unable to access frontend";
-    }
-
-    return status;
+    return true;
 }
 
-bool Frontend::tune()
+bool Frontend::tune(const SatelliteTune &transponder)
 {
     if (!isOpen())
     {
         return false;
     }
 
-    DiSEqCMessage diseqc(DiSEqCMessage::create(diseqc_modes::diseqc1, true, true));
+    removeAllFilters();
+
+    auto useSwitch = (transponder.lnbMode >= diseqc_modes::diseqc1) && (transponder.lnbMode <= diseqc_modes::diseqc4);
+    auto hiFreq = useSwitch && transponder.frequency >= transponder.lnbSwitch;
+    auto freq = transponder.frequency - (hiFreq ? transponder.lnb2 : 0);
+
+    DiSEqCMessage diseqc(DiSEqCMessage::create(diseqc_modes::diseqc1, hiFreq, transponder.horizontal));
 
     if (diseqc.send(_fd) != 0)
     {
@@ -69,11 +104,12 @@ bool Frontend::tune()
 
     struct dtv_property props[] =
         {
-            {DTV_DELIVERY_SYSTEM, {0}, fe_delivery_system::SYS_DVBS},
-            {DTV_FREQUENCY, {0}, 12187500 - 10600000},
-            {DTV_INNER_FEC, {0}, fe_code_rate::FEC_3_4},
-            {DTV_MODULATION, {0}, fe_modulation::QPSK},
-            {DTV_SYMBOL_RATE, {0}, 27500000},
+            {DTV_DELIVERY_SYSTEM, {0}, transponder.s2 ? fe_delivery_system::SYS_DVBS2 : fe_delivery_system::SYS_DVBS},
+            {DTV_FREQUENCY, {0}, freq},
+            {DTV_INNER_FEC, {0}, transponder.innerFEC},
+            {DTV_MODULATION, {0}, transponder.modulation},
+            {DTV_SYMBOL_RATE, {0}, transponder.symbolrate},
+            {DTV_ROLLOFF, {0}, transponder.rolloff},
             {DTV_TUNE, {0}, 0}};
 
     struct dtv_properties dtv_prop = {
