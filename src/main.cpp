@@ -14,6 +14,17 @@ int main()
 
     printf("getStatus: %d\n", frontend.getStatus());
 
-    frontend.createSectionFilter(18).start();
-    frontend.createStreamFilter(168).start();
+    frontend.createSectionFilter(18);
+    printf("startFilter: %d\n", frontend.startFilter(18));
+
+    ::sleep(5);
+
+    printf("removeFilter: %d\n", frontend.removeFilter(18));
+
+    frontend.createStreamFilter(168);
+    printf("startFilter: %d\n", frontend.startFilter(168));
+
+    ::sleep(10);
+
+    printf("done\n");
 }

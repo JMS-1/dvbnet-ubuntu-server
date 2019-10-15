@@ -3,6 +3,8 @@
 
 #include <linux/dvb/frontend.h>
 
+#include <map>
+
 #include "filter.hpp"
 
 class Frontend;
@@ -20,6 +22,7 @@ public:
     }
 
 private:
+    std::map<__u16, Filter *> _filters;
     int _fd;
 
 public:
@@ -30,12 +33,17 @@ public:
     const bool isOpen() { return _fd >= 0; }
 
 public:
-    bool close();
     bool open();
     const fe_status getStatus();
-    Filter &createSectionFilter(__u16 pid);
-    Filter &createStreamFilter(__u16 pid);
-    int tune();
+    bool tune();
+    void close();
+
+public:
+    void createSectionFilter(__u16 pid);
+    void createStreamFilter(__u16 pid);
+    bool startFilter(__u16 pid);
+    bool removeFilter(__u16 pid);
+    void removeAllFilters();
 };
 
 #endif

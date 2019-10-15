@@ -7,18 +7,20 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-bool Frontend::close()
+void Frontend::close()
 {
-    if (_fd < 0)
-    {
-        return false;
-    }
+    auto fd = _fd;
 
-    ::close(_fd);
+    if (fd < 0)
+    {
+        return;
+    }
 
     _fd = -1;
 
-    return true;
+    removeAllFilters();
+
+    ::close(fd);
 }
 
 bool Frontend::open()
@@ -31,16 +33,7 @@ bool Frontend::open()
 
     _fd = ::open(path, O_RDWR);
 
-    if (_fd < 0)
-    {
-        return false;
-    }
-
-    dvb_frontend_info info;
-
-    ::ioctl(_fd, FE_GET_INFO, &info);
-
-    return true;
+    return _fd >= 0;
 }
 
 const fe_status Frontend::getStatus()
@@ -60,20 +53,18 @@ const fe_status Frontend::getStatus()
     return status;
 }
 
-int Frontend::tune()
+bool Frontend::tune()
 {
     if (!isOpen())
     {
-        throw "frontend not open";
+        return false;
     }
 
     DiSEqCMessage diseqc(DiSEqCMessage::create(diseqc_modes::diseqc1, true, true));
 
-    auto diseqc_err = diseqc.send(_fd);
-
-    if (diseqc_err != 0)
+    if (diseqc.send(_fd) != 0)
     {
-        return diseqc_err;
+        return false;
     }
 
     struct dtv_property props[] =
@@ -88,24 +79,59 @@ int Frontend::tune()
     struct dtv_properties dtv_prop = {
         .num = sizeof(props) / sizeof(props[0]), .props = props};
 
-    auto tune_error = ::ioctl(_fd, FE_SET_PROPERTY, &dtv_prop);
+    return (::ioctl(_fd, FE_SET_PROPERTY, &dtv_prop) == 0);
+}
 
-    if (tune_error != 0)
+void Frontend::createSectionFilter(__u16 pid)
+{
+    removeFilter(pid);
+
+    _filters[pid] = new SectionFilter(*this, pid);
+}
+
+void Frontend::createStreamFilter(__u16 pid)
+{
+    removeFilter(pid);
+
+    _filters[pid] = new StreamFilter(*this, pid);
+}
+
+bool Frontend::startFilter(__u16 pid)
+{
+    auto filter = _filters.find(pid);
+
+    if (filter == _filters.end())
     {
-        printf("%d\n", errno);
-
-        throw "unable to tune";
+        return false;
     }
 
-    return 0;
+    filter->second->start();
+
+    return true;
 }
 
-Filter &Frontend::createSectionFilter(__u16 pid)
+bool Frontend::removeFilter(__u16 pid)
 {
-    return *new SectionFilter(*this, pid);
+    auto filter = _filters.find(pid);
+
+    if (filter == _filters.end())
+    {
+        return false;
+    }
+
+    _filters.erase(pid);
+
+    delete filter->second;
+
+    return true;
 }
 
-Filter &Frontend::createStreamFilter(__u16 pid)
+void Frontend::removeAllFilters()
 {
-    return *new StreamFilter(*this, pid);
+    for (auto &filter : _filters)
+    {
+        delete filter.second;
+    }
+
+    _filters.clear();
 }

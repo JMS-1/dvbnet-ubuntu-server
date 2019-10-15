@@ -7,17 +7,18 @@
 void Filter::feeder()
 {
     auto dump = ::open(_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
-
-    ssize_t total = 0;
-
     auto buffer = ::malloc(_bufsize);
 
-    while (total < _limit)
+    for (ssize_t total = 0;;)
     {
         auto bytes = ::read(_fd, buffer, _bufsize);
 
         if (bytes <= 0)
         {
+            ::close(dump);
+
+            ::printf("total %ld\n", total);
+
             return;
         }
 
@@ -25,10 +26,6 @@ void Filter::feeder()
 
         total += bytes;
     }
-
-    ::close(dump);
-
-    ::printf("total %ld\n", total);
 }
 
 void Filter::stop()
@@ -53,7 +50,10 @@ void Filter::stop()
 
     _thread = nullptr;
 
-    thread->join();
+    if (thread->joinable())
+    {
+        thread->join();
+    }
 }
 
 bool Filter::open()
@@ -69,14 +69,12 @@ bool Filter::open()
     return _fd >= 0;
 }
 
-std::thread *Filter::startThread()
+void Filter::startThread()
 {
     if (_thread)
     {
-        return _thread;
+        return;
     }
 
     _thread = new std::thread(&Filter::feeder, this);
-
-    return _thread;
 }

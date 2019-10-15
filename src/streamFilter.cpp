@@ -5,7 +5,7 @@
 
 bool StreamFilter::start()
 {
-    if (!open())
+    if (!open() || !isConnected())
     {
         return false;
     }
@@ -35,7 +35,7 @@ bool StreamFilter::start()
         return false;
     }
 
-    startThread()->join();
+    startThread();
 
     return true;
 }

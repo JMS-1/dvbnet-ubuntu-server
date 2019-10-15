@@ -5,7 +5,7 @@
 
 bool SectionFilter::start()
 {
-    if (!open())
+    if (!open() || !isConnected())
     {
         return false;
     }
@@ -23,7 +23,7 @@ bool SectionFilter::start()
         return false;
     }
 
-    startThread()->join();
+    startThread();
 
     return true;
 }

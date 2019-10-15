@@ -1,13 +1,14 @@
 BUILDDIR = build
-INCDIRS = include
+INCLUDEDIR = include
 SOURCEDIR = src
  
+INCLUDES = $(wildcard $(INCLUDEDIR)/*.hpp)
 SOURCES = $(wildcard $(SOURCEDIR)/*.cpp)
 OBJECTS = $(patsubst $(SOURCEDIR)/%.cpp,$(BUILDDIR)/%.o,$(SOURCES))
 
 EXE_FNAME = $(BUILDDIR)/dvb_proxy
  
-CXXFLAGS += $(INCDIRS:%=-I%) -std=c++1y -DDEBUG -g
+CXXFLAGS += $(INCLUDEDIR:%=-I%) -std=c++1y -DDEBUG -g
 LDFLAGS += -std=c++1y -pthread
 
 .PHONY: build clean
@@ -20,7 +21,7 @@ dir:
 $(EXE_FNAME): $(OBJECTS)
 	$(CXX) $(LDFLAGS) $(OBJECTS) -o $@
 
-$(OBJECTS): $(BUILDDIR)/%.o : $(SOURCEDIR)/%.cpp
+$(OBJECTS): $(BUILDDIR)/%.o : $(SOURCEDIR)/%.cpp $(INCLUDES)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:

@@ -9,12 +9,13 @@ class Frontend;
 
 class Filter
 {
+    friend class Frontend;
+
 protected:
-    Filter(Frontend &frontend, __u16 pid, const char *path, int bufsize, int limit)
+    Filter(Frontend &frontend, __u16 pid, int bufsize, const char *path)
         : _bufsize(bufsize),
           _connected(true),
           _fd(-1),
-          _limit(limit),
           _path(path),
           _pid(pid),
           _thread(nullptr),
@@ -22,7 +23,7 @@ protected:
     {
     }
 
-public:
+protected:
     virtual ~Filter()
     {
         _connected = false;
@@ -36,7 +37,6 @@ private:
     std::thread *_thread;
     const char *_path;
     const int _bufsize;
-    const int _limit;
 
 private:
     void feeder();
@@ -46,8 +46,9 @@ protected:
     int _fd;
 
 protected:
-    std::thread *startThread();
     bool open();
+    void startThread();
+    const bool isConnected() { return _connected; }
 
 public:
     virtual bool start() = 0;
