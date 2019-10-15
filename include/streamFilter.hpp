@@ -1,3 +1,6 @@
+#ifndef _DVBNET_STREAM_FILTER_H
+#define _DVBNET_STREAM_FILTER_H 1
+
 #include "filter.hpp"
 
 class StreamFilter : public Filter
@@ -10,3 +13,5 @@ private:
 public:
     bool start();
 };
+
+#endif

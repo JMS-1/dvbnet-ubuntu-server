@@ -1,12 +1,14 @@
-#include "frontend.hpp"
+#include "manager.hpp"
 
 #include <unistd.h>
 
 int main()
 {
-    Frontend frontend(0, 0);
+    FrontendManager manager;
 
-    printf("open: %d\n", frontend.open());
+    Frontend *frontend = manager.createFrontend(0, 0);
+
+    printf("open: %d\n", frontend->open());
 
     SatelliteTune rtlplus = {
         .lnbMode = diseqc_modes::diseqc1,
@@ -23,21 +25,23 @@ int main()
         .rolloff = fe_rolloff::ROLLOFF_AUTO,
     };
 
-    printf("tune: %d\n", frontend.tune(rtlplus));
+    printf("tune: %d\n", frontend->tune(rtlplus));
 
     ::sleep(1);
 
-    frontend.createSectionFilter(18);
-    printf("startFilter: %d\n", frontend.startFilter(18));
+    frontend->createSectionFilter(18);
+    printf("startFilter: %d\n", frontend->startFilter(18));
 
     ::sleep(5);
 
-    printf("removeFilter: %d\n", frontend.removeFilter(18));
+    printf("removeFilter: %d\n", frontend->removeFilter(18));
 
-    frontend.createStreamFilter(168);
-    printf("startFilter: %d\n", frontend.startFilter(168));
+    frontend->createStreamFilter(168);
+    printf("startFilter: %d\n", frontend->startFilter(168));
 
     ::sleep(10);
 
     printf("done\n");
+
+    delete frontend;
 }

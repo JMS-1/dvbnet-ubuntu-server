@@ -42,21 +42,26 @@ enum frontend_response
     stream = 2,
 };
 
+class FrontendManager;
+
 class Frontend
 {
     friend class Filter;
 
 public:
-    Frontend(int adapter, int frontend) : adapter(adapter), frontend(frontend), _fd(-1), _status(nullptr)
+    Frontend(int adapter, int frontend, FrontendManager *manager)
+        : _fd(-1),
+          _manager(manager),
+          _status(nullptr),
+          adapter(adapter),
+          frontend(frontend)
     {
     }
 
-    ~Frontend()
-    {
-        close();
-    }
+    ~Frontend();
 
 private:
+    FrontendManager *_manager;
     std::map<__u16, Filter *> _filters;
     std::thread *_status;
     int _fd;

@@ -1,3 +1,6 @@
+#ifndef _DVBNET_SECTION_FILTER_H
+#define _DVBNET_SECTION_FILTER_H 1
+
 #include "filter.hpp"
 
 class SectionFilter : public Filter
@@ -10,3 +13,5 @@ private:
 public:
     bool start();
 };
+
+#endif

@@ -1,10 +1,28 @@
 #include "frontend.hpp"
+
+#include "manager.hpp"
 #include "sectionFilter.hpp"
 #include "streamFilter.hpp"
 
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+
+Frontend::~Frontend()
+{
+    close();
+
+    auto manager = _manager;
+
+    if (!manager)
+    {
+        return;
+    }
+
+    _manager = nullptr;
+
+    manager->removeFrontend(adapter, frontend);
+}
 
 void Frontend::close()
 {
