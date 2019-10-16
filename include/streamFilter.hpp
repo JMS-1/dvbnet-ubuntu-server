@@ -3,6 +3,9 @@
 
 #include "filter.hpp"
 
+/*
+    Klasse zur Entgegennahme eines Nutzdatenstroms.
+*/
 class StreamFilter : public Filter
 {
     friend class Frontend;

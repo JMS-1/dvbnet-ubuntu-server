@@ -3,6 +3,9 @@
 
 #include "filter.hpp"
 
+/*
+    Klasse zur Entgegennahme eines Kontrolldatenstroms.
+*/
 class SectionFilter : public Filter
 {
     friend class Frontend;
