@@ -54,7 +54,7 @@ enum frontend_response
 struct signal_response
 {
     // Allgemeiner Status.
-    fe_status_t status;
+    fe_status status;
     // Güte.
     __u16 snr;
     // Stärke.
