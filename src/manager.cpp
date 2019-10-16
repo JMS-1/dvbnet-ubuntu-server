@@ -3,10 +3,17 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+// Überwacht eingehende Verbindung - jede Verbindung erstellt ein Frontend.
 void FrontendManager::listener()
 {
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("+listen\n");
+#endif
+
     for (;;)
     {
+        // Neu Verbidnung entgegennehmen.
         sockaddr_in client = {0};
         socklen_t len = sizeof(client);
 
@@ -17,14 +24,23 @@ void FrontendManager::listener()
             break;
         }
 
+        // Nicht initialisierte Verwaltung erstellen, alles weitere erledigen Steuerbefehle des Clients.
         new Frontend(fd, this);
     }
+
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("-listen\n");
+#endif
 }
 
+// Beginnt mit der Überwachung eingehender Verbindungen.
 bool FrontendManager::listen(in_port_t port /* = 29713 */)
 {
+    // Vorherige Operationen beenden.
     close();
 
+    // Socket anlegen.
     _fd = ::socket(AF_INET, SOCK_STREAM, 0);
 
     if (_fd < 0)
@@ -32,6 +48,7 @@ bool FrontendManager::listen(in_port_t port /* = 29713 */)
         return false;
     }
 
+    // Entgegennahme von Verbindungen vorbereiten.
     sockaddr_in addr = {
         .sin_family = AF_INET,
         .sin_port = port,
@@ -40,23 +57,29 @@ bool FrontendManager::listen(in_port_t port /* = 29713 */)
 
     if (::bind(_fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) != 0)
     {
+        // Im Fehlerfall Verwaltung zurücksetzen.
         close();
 
         return false;
     }
 
+    // Entgegennahme aktivieren.
     if (::listen(_fd, 5) != 0)
     {
+        // Im Fehlerfall Verwaltung zurücksetzen.
         close();
 
         return false;
     }
 
+    // Überwachung einrichten.
     _listen = new std::thread(&FrontendManager::listener, this);
 }
 
+// Beenden der Verwaltung.
 void FrontendManager::close()
 {
+    // Socket beenden.
     auto fd = _fd;
 
     if (fd < 0)
@@ -68,37 +91,55 @@ void FrontendManager::close()
 
     ::close(fd);
 
-    auto thread = _listen;
+    // Überwachung beenden.
+    auto listen = _listen;
 
-    if (!thread)
+    if (!listen)
     {
         return;
     }
 
     _listen = nullptr;
 
-    if (thread->joinable())
+    if (listen->joinable())
     {
-        thread->join();
+        listen->join();
     }
+
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("-manager\n");
+#endif
 }
 
+// Beendet die Verwaltung.
 FrontendManager::~FrontendManager()
 {
+    // Neu Verbindung sind nun nicht mehr gestattet.
     _active = false;
 
+    if (_fd >= 0)
+    {
+        ::shutdown(_fd, SHUT_RD);
+    }
+
+    // Alle verwalteten Frontends beenden.
     for (auto &frontend : _frontends)
     {
         delete frontend.second;
     }
 
+    // Verwaltung leeren.
     _frontends.clear();
 
+    // Verwaltung beenden.
     close();
 }
 
+// Schlüssel zur einfachen Verwaltung von Verbindungen erstellen.
 int makeKey(int adapter, int frontend)
 {
+    // Die Hardwaregrenze von maximal 1000 DVB Karten mit maximal 1000 Frontends sollte kein Problem sein.
     if (adapter < 0 || adapter > 999)
     {
         return -1;
@@ -109,16 +150,20 @@ int makeKey(int adapter, int frontend)
         return -1;
     }
 
+    // Dann ist es auch sehr einfach einen Schlüssel zu erstellen.
     return 1000 * adapter + frontend;
 }
 
+// Trägte ein Frontend in die Verwaltung ein.
 bool FrontendManager::addFrontend(Frontend *frontend)
 {
+    // Verwaltung ist bereits beendet.
     if (!_active)
     {
         return false;
     }
 
+    // Eindeutigen Schlüssel erstellen.
     auto key = makeKey(frontend->adapter, frontend->frontend);
 
     if (key < 0)
@@ -126,23 +171,28 @@ bool FrontendManager::addFrontend(Frontend *frontend)
         return false;
     }
 
+    // Pro Hardware darf es nur eine Verwaltung geben.
     if (_frontends.find(key) != _frontends.end())
     {
         return false;
     }
 
+    // Verbindung vermerken.
     _frontends[key] = frontend;
 
     return true;
 }
 
+// Verbindung aus der Verwaltung entfernen.
 void FrontendManager::removeFrontend(int adapter, int frontend)
 {
+    // Verwaltung ist bereits deaktiviert.
     if (!_active)
     {
         return;
     }
 
+    // Schlüssel anlegen.
     auto key = makeKey(adapter, frontend);
 
     if (key < 0)
@@ -150,10 +200,9 @@ void FrontendManager::removeFrontend(int adapter, int frontend)
         return;
     }
 
-    if (_frontends.find(key) == _frontends.end())
+    // Verbindung entfernen falls vorhanden.
+    if (_frontends.find(key) != _frontends.end())
     {
-        return;
+        _frontends.erase(key);
     }
-
-    _frontends.erase(key);
 }
