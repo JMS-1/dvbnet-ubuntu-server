@@ -7,9 +7,9 @@
 
 void reader(int fd)
 {
-    auto dump = ::open("dump.bin", O_WRONLY | O_CREAT | O_TRUNC);
+    auto dump = ::open("dump.bin", O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
 
-    char buffer[100000];
+    char buffer[1000000];
 
     for (int total = 0;;)
     {

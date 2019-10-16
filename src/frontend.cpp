@@ -330,35 +330,19 @@ void Frontend::close(bool nowait)
     }
 }
 
-void Frontend::sendResponse(frontend_response type, __u16 pid, const void *payload, int payloadSize)
-{
-    struct response
-    {
-        frontend_response type;
-        __u16 pid;
-        int len;
-        char payload[0];
-    };
-
-    auto total = sizeof(response) + payloadSize;
-
-    response *data = reinterpret_cast<response *>(::malloc(total));
-
-    data->type = type;
-    data->pid = pid;
-    data->len = payloadSize;
-
-    ::memcpy(data->payload, payload, payloadSize);
-
-    ::write(_tcp, data, total);
-}
-
 void Frontend::readStatus()
 {
+    auto len = sizeof(response) + sizeof(signal_response);
+
+    response *data = reinterpret_cast<response *>(::malloc(len));
+
+    data->type = frontend_response::signal;
+    data->pid = 0;
+
+    auto &signal = *reinterpret_cast<signal_response *>(data->payload);
+
     for (;; ::sleep(5))
     {
-        signal_response signal = {0};
-
         if (::ioctl(_fd, FE_READ_STATUS, &signal.status) != 0)
         {
             break;
@@ -379,8 +363,10 @@ void Frontend::readStatus()
             break;
         }
 
-        sendResponse(frontend_response::signal, 0, &signal, sizeof(signal));
+        sendResponse(data, sizeof(signal_response));
     }
+
+    ::free(data);
 }
 
 void Frontend::removeFilter(__u16 pid)

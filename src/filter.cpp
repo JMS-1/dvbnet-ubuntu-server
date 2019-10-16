@@ -6,8 +6,14 @@
 
 void Filter::feeder()
 {
-    auto bufsize = _type == frontend_response::section ? 1000 : 10000;
-    auto buffer = ::malloc(bufsize);
+    auto bufsize = _type == frontend_response::section ? 1000 : 250000;
+
+    response *data = reinterpret_cast<response *>(::malloc(sizeof(response) + bufsize));
+
+    data->type = _type;
+    data->pid = _pid;
+
+    auto buffer = data->payload;
 
     for (;;)
     {
@@ -15,11 +21,15 @@ void Filter::feeder()
 
         if (bytes <= 0)
         {
-            return;
+            break;
         }
 
-        _frontend.sendResponse(_type, _pid, buffer, bytes);
+        data->len = bytes;
+
+        _frontend.sendResponse(data, bytes);
     }
+
+    ::free(data);
 }
 
 void Filter::stop()
