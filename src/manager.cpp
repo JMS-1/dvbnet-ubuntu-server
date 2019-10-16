@@ -74,6 +74,8 @@ bool FrontendManager::listen(in_port_t port /* = 29713 */)
 
     // Überwachung einrichten.
     _listen = new std::thread(&FrontendManager::listener, this);
+
+    return true;
 }
 
 // Beenden der Verwaltung.
