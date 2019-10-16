@@ -4,15 +4,12 @@ int main()
 {
     FrontendManager manager;
 
-    if (!manager.listen(29714))
+    if (!manager.listen())
     {
         ::exit(1);
     }
 
     ::printf("listener started\n");
 
-    for (;;)
-    {
-        ::sleep(1000);
-    }
+    manager.run();
 }

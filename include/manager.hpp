@@ -37,6 +37,8 @@ private:
 public:
     // Beginnt mit der Entgegennahme neuer Verbindungen.
     bool listen(in_port_t = 29713);
+    // Aktiviert die Verwaltung als Server.
+    void run() { _listen->join(); }
 
 private:
     // Fügt eine Verbindungen zur Verwaltung hinzu.

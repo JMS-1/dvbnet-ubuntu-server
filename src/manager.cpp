@@ -48,9 +48,9 @@ bool FrontendManager::listen(in_port_t port /* = 29713 */)
     // Entgegennahme von Verbindungen vorbereiten.
     sockaddr_in addr = {
         .sin_family = AF_INET,
-        .sin_port = port,
-        .sin_addr = {.s_addr = INADDR_ANY},
-        {0}};
+        .sin_port = ::htons(port),
+        .sin_addr = {.s_addr = ::htonl(INADDR_ANY)},
+        .sin_zero = {0}};
 
     if (::bind(_fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) != 0)
     {
