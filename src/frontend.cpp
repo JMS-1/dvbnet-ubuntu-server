@@ -254,6 +254,9 @@ void Frontend::readStatus()
 // Einzelnen Datenempfang beenden.
 void Frontend::removeFilter(__u16 pid)
 {
+    // Synchronisation.
+    Locker _self(_lock);
+
     // Wir prüfen erst einmal ob es den Eintrag überhaupt gibt.
     auto filter = _filters.find(pid);
 
@@ -272,9 +275,12 @@ void Frontend::removeFilter(__u16 pid)
 // Gesamten Datenempfang beenden.
 void Frontend::removeAllFilters()
 {
+    // Synchronisation.
+    Locker _self(_lock);
+
+    // Datenempfang beenden.
     for (auto &filter : _filters)
     {
-        // Datenempfang beenden.
         delete filter.second;
     }
 

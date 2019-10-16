@@ -115,7 +115,10 @@ void FrontendManager::close()
 // Beendet die Verwaltung.
 FrontendManager::~FrontendManager()
 {
-    // Neu Verbindung sind nun nicht mehr gestattet.
+    // Sperren.
+    Locker _self(_lock);
+
+    // Neue Verbindung sind nun nicht mehr gestattet.
     _active = false;
 
     if (_fd >= 0)
@@ -157,6 +160,9 @@ int makeKey(int adapter, int frontend)
 // Trägte ein Frontend in die Verwaltung ein.
 bool FrontendManager::addFrontend(Frontend *frontend)
 {
+    // Sperren.
+    Locker _self(_lock);
+
     // Verwaltung ist bereits beendet.
     if (!_active)
     {
@@ -186,6 +192,15 @@ bool FrontendManager::addFrontend(Frontend *frontend)
 // Verbindung aus der Verwaltung entfernen.
 void FrontendManager::removeFrontend(int adapter, int frontend)
 {
+    // Verwaltung ist bereits deaktiviert.
+    if (!_active)
+    {
+        return;
+    }
+
+    // Sperren.
+    Locker _self(_lock);
+
     // Verwaltung ist bereits deaktiviert.
     if (!_active)
     {

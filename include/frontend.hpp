@@ -4,12 +4,24 @@
 #include <unistd.h>
 
 #include <map>
+#include <mutex>
 #include <thread>
 
 #include "messages.hpp"
 
 class Filter;
 class FrontendManager;
+
+// Hilfsklasse zum Sperren innerhalb eines Blocks.
+class Locker
+{
+public:
+    Locker(std::mutex &lock) : _lock(lock) { _lock.lock(); }
+    ~Locker() { _lock.unlock(); }
+
+private:
+    std::mutex &_lock;
+};
 
 // Verwaltet ein einzelnes Frontend.
 class Frontend
@@ -29,9 +41,9 @@ private:
     // Zugehörige Frontendverwaltung.
     FrontendManager *_manager;
     // Verbindung zum Frontend.
-    int _fd;
+    volatile int _fd;
     // Steuerkanal zum Client.
-    int _tcp;
+    volatile int _tcp;
     // Zu verwendender DVB Adapter.
     int adapter;
     // Zu verwendendes Frontend des DVB Adapters.
@@ -42,6 +54,8 @@ private:
     std::thread *_listener;
     // Überwachung des Empfangssignals.
     std::thread *_status;
+    // Synchronisation der Datenstrukturen.
+    std::mutex _lock;
 
 private:
     // Überwachung des Empfangssignals.

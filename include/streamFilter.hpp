@@ -14,6 +14,7 @@ private:
     StreamFilter(Frontend &frontend, __u16 pid) : Filter(frontend, pid, frontend_response::stream) {}
 
 public:
+    // Aktiviert den Empfang.
     bool start();
 };
 

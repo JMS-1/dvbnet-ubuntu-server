@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 
 #include <map>
+#include <mutex>
 #include <thread>
 
 #include "frontend.hpp"
@@ -30,6 +31,8 @@ private:
     volatile bool _active;
     // Socket für die Entgegennahme von neuen Verbindungen.
     volatile int _fd;
+    // Synchronisation der Verwaltungstrkturen.
+    std::mutex _lock;
 
 public:
     // Beginnt mit der Entgegennahme neuer Verbindungen.

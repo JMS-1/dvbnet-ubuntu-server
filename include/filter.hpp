@@ -45,7 +45,7 @@ private:
     // Gesetzt während die Verwaltung verwendet werden darf.
     volatile bool _active;
     // Dateihandle zum Demultiplexer.
-    int _fd;
+    volatile int _fd;
     // Instanz für die Datenweitergabe.
     std::thread *_thread;
 
