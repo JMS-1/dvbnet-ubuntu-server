@@ -14,10 +14,7 @@ void FrontendManager::listener()
     for (;;)
     {
         // Neu Verbidnung entgegennehmen.
-        sockaddr_in client = {0};
-        socklen_t len = sizeof(client);
-
-        auto fd = ::accept(_fd, reinterpret_cast<sockaddr *>(&client), &len);
+        auto fd = ::accept(_fd, nullptr, nullptr);
 
         if (fd < 0)
         {
@@ -53,7 +50,7 @@ bool FrontendManager::listen(in_port_t port /* = 29713 */)
         .sin_family = AF_INET,
         .sin_port = port,
         .sin_addr = {.s_addr = INADDR_ANY},
-    };
+        {0}};
 
     if (::bind(_fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) != 0)
     {
