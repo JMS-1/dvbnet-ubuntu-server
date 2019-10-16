@@ -93,11 +93,15 @@ int main()
     ::write(fd, &delsect, sizeof(delsect));
     ::write(fd, &epg, sizeof(epg));
 
-    auto addstream = frontend_request::add_stream_filter;
-    __u16 vid = 168;
+    __u16 vids[] = {163, 166, 301, 165, 167, 173, 168, 169};
 
-    ::write(fd, &addstream, sizeof(addstream));
-    ::write(fd, &vid, sizeof(vid));
+    for (auto vid : vids)
+    {
+        auto addstream = frontend_request::add_stream_filter;
+
+        ::write(fd, &addstream, sizeof(addstream));
+        ::write(fd, &vid, sizeof(vid));
+    }
 
     ::sleep(10);
 

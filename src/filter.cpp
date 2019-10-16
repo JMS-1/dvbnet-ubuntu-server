@@ -16,7 +16,7 @@ void Filter::feeder()
 #endif
 
     // Die Größe des Zwischenspeichers orientiert sich an der Art des Datenstroms.
-    auto bufsize = _type == frontend_response::section ? 1000 : 250000;
+    auto bufsize = _type == frontend_response::section ? 1000 : DVBNET_FILTER_STREAM_BUFFER;
 
     // Zusätzlich zu den Nutzdaten muss auch immer die Kontrollstruktur aufgesetzt werden.
     response *data = reinterpret_cast<response *>(::malloc(sizeof(response) + bufsize));

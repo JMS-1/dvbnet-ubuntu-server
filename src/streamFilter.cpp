@@ -17,7 +17,7 @@ bool StreamFilter::start()
     }
 
     // Vergrößerten Zwischenspeicher anlegen.
-    ::ioctl(fd, DMX_SET_BUFFER_SIZE, 500 * 1024) != 0;
+    ::ioctl(fd, DMX_SET_BUFFER_SIZE, DVBNET_FILTER_STREAM_BUFFER);
 
     // Datenstrom beim Demultiplexer anmelden.
     dmx_pes_filter_params filter = {
@@ -25,7 +25,7 @@ bool StreamFilter::start()
         dmx_input::DMX_IN_FRONTEND,
         dmx_output::DMX_OUT_TAP,
         dmx_ts_pes::DMX_PES_OTHER,
-        DMX_IMMEDIATE_START | DMX_CHECK_CRC};
+        DMX_IMMEDIATE_START};
 
     if (::ioctl(fd, DMX_SET_PES_FILTER, &filter) != 0)
     {

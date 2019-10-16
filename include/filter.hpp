@@ -7,6 +7,8 @@
 
 #include "frontend.hpp"
 
+#define DVBNET_FILTER_STREAM_BUFFER (256 * 1024)
+
 /*
     Verwaltet die Entgegennahme eines Datenstroms.
 */
