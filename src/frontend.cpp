@@ -9,6 +9,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+// Erstellt eine neue Verwaltung für ein Frontend.
 Frontend::Frontend(int tcp, FrontendManager *manager)
     : _active(true),
       _fd(-1),
@@ -18,15 +19,20 @@ Frontend::Frontend(int tcp, FrontendManager *manager)
       adapter(adapter),
       frontend(frontend)
 {
+    // Beginnt mit der Überwachung von eingegenden Steuermeldungen.
     _listener = new std::thread(&Frontend::waitRequest, this);
 }
 
+// Vernichtet eine Verwaltung.
 Frontend::~Frontend()
 {
+    // Neue Anfragen sind nun nicht mehr möglich.
     _active = false;
 
-    close();
+    // Verwaltung beenden.
+    close(false);
 
+    // An die Verwaltung aller Frontends melden.
     auto manager = _manager;
 
     if (!manager)
@@ -39,19 +45,22 @@ Frontend::~Frontend()
     manager->removeFrontend(adapter, frontend);
 }
 
-bool readblock(int fd, void *buffer, int len)
+// Kontrolldaten vom Client einlesen.
+bool Frontend::readblock(void *buffer, int len)
 {
-    auto cbuffer = static_cast<char *>(buffer);
-
-    while (len > 0)
+    // Daten einlesen.
+    for (auto cbuffer = static_cast<char *>(buffer); len > 0;)
     {
-        auto read = ::read(fd, cbuffer, len);
+        // Nächste Daten einlesen.
+        auto read = ::read(_tcp, cbuffer, len);
 
+        // Verbindung wurde beendet.
         if (read <= 0)
         {
             return false;
         }
 
+        // Speicher nachführen.
         cbuffer += read;
         len -= read;
     }
@@ -59,181 +68,25 @@ bool readblock(int fd, void *buffer, int len)
     return true;
 }
 
-bool Frontend::processConnect()
-{
-    connect_request request;
-
-    if (!readblock(_tcp, &request, sizeof(request)))
-    {
-        return false;
-    }
-
-    if (!_active)
-    {
-        return false;
-    }
-
-    char path[40];
-
-    ::sprintf(path, "/dev/dvb/adapter%i/frontend%i", adapter, frontend);
-
-    _fd = ::open(path, O_RDWR);
-
-    if (_fd < 0)
-    {
-        return false;
-    }
-
-    _status = new std::thread(&Frontend::readStatus, this);
-
-    auto manager = _manager;
-
-    if (!manager)
-    {
-        return false;
-    }
-
-    return manager->addFrontend(this);
-}
-
-bool Frontend::processTune()
-{
-    SatelliteTune transponder;
-
-    if (!readblock(_tcp, &transponder, sizeof(transponder)))
-    {
-        return false;
-    }
-
-    if (!_active)
-    {
-        return false;
-    }
-
-    if (_fd < 0)
-    {
-        return false;
-    }
-
-    removeAllFilters();
-
-    auto useSwitch = (transponder.lnbMode >= diseqc_modes::diseqc1) && (transponder.lnbMode <= diseqc_modes::diseqc4);
-    auto hiFreq = useSwitch && transponder.frequency >= transponder.lnbSwitch;
-    auto freq = transponder.frequency - (hiFreq ? transponder.lnb2 : 0);
-
-    DiSEqCMessage diseqc(DiSEqCMessage::create(diseqc_modes::diseqc1, hiFreq, transponder.horizontal));
-
-    if (diseqc.send(_fd) != 0)
-    {
-        return true;
-    }
-
-    struct dtv_property props[] =
-        {
-            {DTV_DELIVERY_SYSTEM, {0}, transponder.s2 ? fe_delivery_system::SYS_DVBS2 : fe_delivery_system::SYS_DVBS},
-            {DTV_FREQUENCY, {0}, freq},
-            {DTV_INNER_FEC, {0}, transponder.innerFEC},
-            {DTV_MODULATION, {0}, transponder.modulation},
-            {DTV_SYMBOL_RATE, {0}, transponder.symbolrate},
-            {DTV_ROLLOFF, {0}, transponder.rolloff},
-            {DTV_TUNE, {0}, 0}};
-
-    struct dtv_properties dtv_prop = {
-        .num = sizeof(props) / sizeof(props[0]), .props = props};
-
-    ::ioctl(_fd, FE_SET_PROPERTY, &dtv_prop);
-
-    return true;
-}
-
-bool Frontend::processAddSection()
-{
-    __u16 pid;
-
-    if (!readblock(_tcp, &pid, sizeof(pid)))
-    {
-        return false;
-    }
-
-    if (!_active)
-    {
-        return false;
-    }
-
-    removeFilter(pid);
-
-    auto filter = new SectionFilter(*this, pid);
-#include <unistd.h>
-
-    _filters[pid] = filter;
-
-    filter->start();
-
-    return true;
-}
-
-bool Frontend::processAddStream()
-{
-    __u16 pid;
-
-    if (!readblock(_tcp, &pid, sizeof(pid)))
-    {
-        return false;
-    }
-
-    if (!_active)
-    {
-        return false;
-    }
-
-    removeFilter(pid);
-
-    auto filter = new StreamFilter(*this, pid);
-
-    _filters[pid] = filter;
-
-    filter->start();
-
-    return true;
-}
-
-bool Frontend::processRemoveFilter()
-{
-    __u16 pid;
-
-    if (!readblock(_tcp, &pid, sizeof(pid)))
-    {
-        return false;
-    }
-
-    if (!_active)
-    {
-        return false;
-    }
-
-    removeFilter(pid);
-
-    return true;
-}
-
-bool Frontend::processRemoveAllFilters()
-{
-    removeAllFilters();
-
-    return true;
-}
-
+// Nimmt Steuerbefehle vom Client entgegen.
 void Frontend::waitRequest()
 {
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("+%d/%d client\n", adapter, frontend);
+#endif
+
     for (;;)
     {
+        // Nächsten Steuerbefehl einlesen.
         frontend_request request;
 
-        if (!readblock(_tcp, &request, sizeof(request)))
+        if (!readblock(&request, sizeof(request)))
         {
             break;
         }
 
+        // Steuerbefehl ausführen.
         auto ok = false;
 
         switch (request)
@@ -264,19 +117,22 @@ void Frontend::waitRequest()
         }
     }
 
+    // Verbindung schliessen.
     if (_active)
     {
         close(true);
     }
+
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("-%d/%d client\n", adapter, frontend);
+#endif
 }
 
-void Frontend::close()
-{
-    close(false);
-}
-
+// Beendet die Verwaltung implizit nach einem Fehler mit dem Steuerkanal.
 void Frontend::close(bool nowait)
 {
+    // Steuerkanal schliessen.
     auto tcp = _tcp;
 
     if (tcp < 0)
@@ -288,6 +144,7 @@ void Frontend::close(bool nowait)
 
     ::close(tcp);
 
+    // Überwachung des Steuerkanals beendet.
     auto listener = _listener;
 
     if (!listener)
@@ -297,11 +154,13 @@ void Frontend::close(bool nowait)
 
     _listener = nullptr;
 
+    // Eine Synchronisation nur bei explizitem Beenden durchführen.
     if (listener->joinable() && !nowait)
     {
         listener->join();
     }
 
+    // Dateihandle zum Frontend schliessen.
     auto fd = _fd;
 
     if (fd < 0)
@@ -311,10 +170,13 @@ void Frontend::close(bool nowait)
 
     _fd = -1;
 
+    // Alle angemeldeten Filter beenden.
     removeAllFilters();
 
+    // Verbindung schliessen.
     ::close(fd);
 
+    // Signalüberwachung beenden.
     auto status = _status;
 
     if (!status)
@@ -328,21 +190,34 @@ void Frontend::close(bool nowait)
     {
         status->join();
     }
+
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("%d/%d ended\n", adapter, frontend);
+#endif
 }
 
+// Überwacht das Empfangssignal.
 void Frontend::readStatus()
 {
-    auto len = sizeof(response) + sizeof(signal_response);
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("+status %d/%d\n", adapter, frontend);
+#endif
 
-    response *data = reinterpret_cast<response *>(::malloc(len));
+    // Protokollstruktur anlegen.
+    response *data = reinterpret_cast<response *>(::malloc(sizeof(response) + sizeof(signal_response)));
 
+    // Protokollstruktur vorbereiten.
     data->type = frontend_response::signal;
     data->pid = 0;
 
+    // Zugriff auf die Signaldaten.
     auto &signal = *reinterpret_cast<signal_response *>(data->payload);
 
     for (;; ::sleep(5))
     {
+        // Detaildaten auslesen.
         if (::ioctl(_fd, FE_READ_STATUS, &signal.status) != 0)
         {
             break;
@@ -363,14 +238,23 @@ void Frontend::readStatus()
             break;
         }
 
+        // Informationen an den Client melden.
         sendResponse(data, sizeof(signal_response));
     }
 
+    // Protokollstruktur freigeben.
     ::free(data);
+
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("-status %d/%d\n", adapter, frontend);
+#endif
 }
 
+// Einzelnen Datenempfang beenden.
 void Frontend::removeFilter(__u16 pid)
 {
+    // Wir prüfen erst einmal ob es den Eintrag überhaupt gibt.
     auto filter = _filters.find(pid);
 
     if (filter == _filters.end())
@@ -378,17 +262,32 @@ void Frontend::removeFilter(__u16 pid)
         return;
     }
 
+    // Eintrag entfernen.
     _filters.erase(pid);
 
+    // Datenempfang beenden.
     delete filter->second;
 }
 
+// Gesamten Datenempfang beenden.
 void Frontend::removeAllFilters()
 {
     for (auto &filter : _filters)
     {
+        // Datenempfang beenden.
         delete filter.second;
     }
 
+    // Verwaltung löschen.
     _filters.clear();
+}
+
+// Sendet Daten an den Client.
+void Frontend::sendResponse(response *data, int payloadSize)
+{
+    // Nutzdaten festlegen.
+    data->len = payloadSize;
+
+    // Kontroll- und Steuerdaten als Einheit senden.
+    ::write(_tcp, data, sizeof(response) + payloadSize);
 }
