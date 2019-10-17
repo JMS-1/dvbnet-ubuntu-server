@@ -127,6 +127,9 @@ void Frontend::waitRequest()
     // Protokollierung.
     ::printf("-%d/%d client\n", adapter, frontend);
 #endif
+
+    // Instanz vernichten.
+    delete this;
 }
 
 // Beendet die Verwaltung implizit nach einem Fehler mit dem Steuerkanal.
