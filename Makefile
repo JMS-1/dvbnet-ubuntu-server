@@ -8,8 +8,8 @@ OBJECTS = $(patsubst $(SOURCEDIR)/%.cpp,$(BUILDDIR)/%.o,$(SOURCES))
 
 EXE_FNAME = $(BUILDDIR)/dvb_proxy
  
-CXXFLAGS += $(INCLUDEDIR:%=-I%) -std=c++1y -DDEBUG -g
-LDFLAGS += -std=c++1y -pthread
+CXXFLAGS += $(INCLUDEDIR:%=-I%) -std=c++11 -pthread -DDEBUG -g
+LDFLAGS += -pthread
 
 .PHONY: build clean
  
