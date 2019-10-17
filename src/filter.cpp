@@ -79,9 +79,13 @@ void Filter::stop()
 
     _thread = nullptr;
 
-    if (thread->joinable())
+    try
     {
         thread->join();
+    }
+    catch (...)
+    {
+        ::printf("join failed\n");
     }
 
 #ifdef DEBUG

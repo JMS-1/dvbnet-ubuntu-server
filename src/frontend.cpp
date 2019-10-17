@@ -158,9 +158,16 @@ void Frontend::close(bool nowait)
     _listener = nullptr;
 
     // Eine Synchronisation nur bei explizitem Beenden durchführen.
-    if (listener->joinable() && !nowait)
+    if (!nowait)
     {
-        listener->join();
+        try
+        {
+            listener->join();
+        }
+        catch (...)
+        {
+            ::printf("join failed\n");
+        }
     }
 
     // Dateihandle zum Frontend schliessen.
@@ -189,9 +196,13 @@ void Frontend::close(bool nowait)
 
     _status = nullptr;
 
-    if (status->joinable())
+    try
     {
         status->join();
+    }
+    catch (...)
+    {
+        ::printf("join failed\n");
     }
 
 #ifdef DEBUG

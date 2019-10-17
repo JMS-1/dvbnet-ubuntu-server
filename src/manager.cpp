@@ -100,9 +100,13 @@ void FrontendManager::close()
 
     _listen = nullptr;
 
-    if (listen->joinable())
+    try
     {
         listen->join();
+    }
+    catch (...)
+    {
+        ::printf("join failed\n");
     }
 
 #ifdef DEBUG
