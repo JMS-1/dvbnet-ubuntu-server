@@ -46,7 +46,7 @@ struct connect_request
 enum frontend_response
 {
     section = 0,
-    signal = 1,
+    signal_status = 1,
     stream = 2,
 };
 

@@ -1,11 +1,13 @@
 #include "manager.hpp"
+#include "threadTools.hpp"
 
 #include <sys/socket.h>
-#include <unistd.h>
 
 // Überwacht eingehende Verbindung - jede Verbindung erstellt ein Frontend.
 void FrontendManager::listener()
 {
+    ThreadTools::signal();
+
 #ifdef DEBUG
     // Protokollierung.
     ::printf("+listen\n");
@@ -13,7 +15,7 @@ void FrontendManager::listener()
 
     for (;;)
     {
-        // Neu Verbidnung entgegennehmen.
+        // Neue Verbindung entgegennehmen.
         auto fd = ::accept(_fd, nullptr, nullptr);
 
         if (fd < 0)
@@ -91,23 +93,7 @@ void FrontendManager::close()
     ::close(fd);
 
     // Überwachung beenden.
-    auto listen = _listen;
-
-    if (!listen)
-    {
-        return;
-    }
-
-    _listen = nullptr;
-
-    try
-    {
-        listen->join();
-    }
-    catch (...)
-    {
-        ::printf("join failed\n");
-    }
+    ThreadTools::join(_listen);
 
 #ifdef DEBUG
     // Protokollierung.

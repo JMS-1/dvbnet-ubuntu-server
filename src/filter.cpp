@@ -1,8 +1,8 @@
 #include "filter.hpp"
 #include "frontend.hpp"
+#include "threadTools.hpp"
 
 #include <fcntl.h>
-#include <unistd.h>
 
 /*
     Liest einen Datenstrom (einzelne PID) vom Demultiplexer und meldet
@@ -10,6 +10,8 @@
 */
 void Filter::feeder()
 {
+    ThreadTools::signal();
+
 #ifdef DEBUG
     // Protokollausgabe.
     ::printf("+pid=%d\n", _pid);
@@ -31,7 +33,7 @@ void Filter::feeder()
     for (;;)
     {
         // Daten aus dem Demultiplexer auslesen.
-        auto bytes = ::read(_fd, buffer, bufsize);
+        auto bytes = read(_fd, buffer, bufsize);
 
         // Sobald keine Daten mehr ankommen wird das Auslesen beendet.
         if (bytes <= 0)
@@ -75,23 +77,7 @@ void Filter::stop()
     ::close(fd);
 
     // Entgegennahme der Daten beenden.
-    const auto thread = _thread;
-
-    if (!thread)
-    {
-        return;
-    }
-
-    _thread = nullptr;
-
-    try
-    {
-        thread->join();
-    }
-    catch (...)
-    {
-        ::printf("join failed\n");
-    }
+    ThreadTools::join(_thread);
 
 #ifdef DEBUG
     // Protokollausgabe.

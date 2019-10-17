@@ -3,6 +3,7 @@
 #include "manager.hpp"
 #include "sectionFilter.hpp"
 #include "streamFilter.hpp"
+#include "threadTools.hpp"
 
 #include <fcntl.h>
 #include <string.h>
@@ -71,6 +72,8 @@ bool Frontend::readblock(void *buffer, int len)
 // Nimmt Steuerbefehle vom Client entgegen.
 void Frontend::waitRequest()
 {
+    ::ThreadTools::signal();
+
 #ifdef DEBUG
     // Protokollierung.
     ::printf("+%d/%d client\n", adapter, frontend);
@@ -148,27 +151,7 @@ void Frontend::close(bool nowait)
     ::close(tcp);
 
     // Überwachung des Steuerkanals beendet.
-    auto listener = _listener;
-
-    if (!listener)
-    {
-        return;
-    }
-
-    _listener = nullptr;
-
-    // Eine Synchronisation nur bei explizitem Beenden durchführen.
-    if (!nowait)
-    {
-        try
-        {
-            listener->join();
-        }
-        catch (...)
-        {
-            ::printf("join failed\n");
-        }
-    }
+    ThreadTools::join(_listener, nowait);
 
     // Dateihandle zum Frontend schliessen.
     auto fd = _fd;
@@ -187,23 +170,7 @@ void Frontend::close(bool nowait)
     ::close(fd);
 
     // Signalüberwachung beenden.
-    auto status = _status;
-
-    if (!status)
-    {
-        return;
-    }
-
-    _status = nullptr;
-
-    try
-    {
-        status->join();
-    }
-    catch (...)
-    {
-        ::printf("join failed\n");
-    }
+    ThreadTools::join(_status);
 
 #ifdef DEBUG
     // Protokollierung.
@@ -214,6 +181,8 @@ void Frontend::close(bool nowait)
 // Überwacht das Empfangssignal.
 void Frontend::readStatus()
 {
+    ::ThreadTools::signal();
+
 #ifdef DEBUG
     // Protokollierung.
     ::printf("+status %d/%d\n", adapter, frontend);
@@ -223,7 +192,7 @@ void Frontend::readStatus()
     response *data = reinterpret_cast<response *>(::malloc(sizeof(response) + sizeof(signal_response)));
 
     // Protokollstruktur vorbereiten.
-    data->type = frontend_response::signal;
+    data->type = frontend_response::signal_status;
     data->pid = 0;
 
     // Zugriff auf die Signaldaten.
@@ -309,5 +278,7 @@ void Frontend::sendResponse(response *data, int payloadSize)
     data->len = payloadSize;
 
     // Kontroll- und Steuerdaten als Einheit senden.
-    ::write(_tcp, data, sizeof(response) + payloadSize);
+    Locker _self(_lock);
+
+    write(_tcp, data, sizeof(response) + payloadSize);
 }
