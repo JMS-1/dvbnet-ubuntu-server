@@ -64,5 +64,8 @@ bool Frontend::processTune()
     }
 #endif
 
+    // Eine kleine Pause um sicherzustellen, dass der Vorgang auch abgeschlossen wurde.
+    ::sleep(2);
+
     return true;
 }
