@@ -98,15 +98,45 @@ int main()
         .rolloff = fe_rolloff::ROLLOFF_AUTO,
     };
 
+    SatelliteTune zdfhd = {
+        .lnbMode = diseqc_modes::diseqc1,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
+        .modulation = fe_modulation::PSK_8,
+        .frequency = 11361750,
+        .symbolrate = 22000000,
+        .horizontal = true,
+        .innerFEC = fe_code_rate::FEC_2_3,
+        .s2 = true,
+        .rolloff = fe_rolloff::ROLLOFF_35,
+    };
+
+    SatelliteTune arte = {
+        .lnbMode = diseqc_modes::diseqc1,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
+        .modulation = fe_modulation::QPSK,
+        .frequency = 10743750,
+        .symbolrate = 22000000,
+        .horizontal = true,
+        .innerFEC = fe_code_rate::FEC_5_6,
+        .s2 = true,
+        .rolloff = fe_rolloff::ROLLOFF_AUTO,
+    };
+
     auto tr = frontend_request::tune;
 
     ::write(fd, &tr, sizeof(tr));
-    ::write(fd, &rtlplus, sizeof(rtlplus));
+    ::write(fd, &zdfhd, sizeof(zdfhd));
 
     ::sleep(1);
 
-    auto addsect = frontend_request::add_stream_filter;
-    __u16 epg = 163;
+    auto addsect = frontend_request::add_section_filter;
+    __u16 epg = 18;
 
     ::write(fd, &addsect, sizeof(addsect));
     ::write(fd, &epg, sizeof(epg));

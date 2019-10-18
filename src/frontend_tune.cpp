@@ -31,7 +31,8 @@ bool Frontend::processTune()
     // DiSEqC Steuerung durchführen.
     auto useSwitch = (transponder.lnbMode >= diseqc_modes::diseqc1) && (transponder.lnbMode <= diseqc_modes::diseqc4);
     auto hiFreq = useSwitch && transponder.frequency >= transponder.lnbSwitch;
-    auto freq = transponder.frequency - (hiFreq ? transponder.lnb2 : 0);
+    auto loFreq = useSwitch && transponder.frequency < transponder.lnbSwitch;
+    auto freq = transponder.frequency - (hiFreq ? transponder.lnb2 : 0) - (loFreq ? transponder.lnb1 : 0);
 
     DiSEqCMessage diseqc(DiSEqCMessage::create(diseqc_modes::diseqc1, hiFreq, transponder.horizontal));
 
@@ -53,7 +54,15 @@ bool Frontend::processTune()
         .num = sizeof(props) / sizeof(props[0]), .props = props};
 
     // Fehlerbehandlung bewußt deaktiviert.
-    ::ioctl(_fd, FE_SET_PROPERTY, &dtv_prop);
+    auto tune_err = ::ioctl(_fd, FE_SET_PROPERTY, &dtv_prop);
+
+#ifdef DEBUG
+    // Protokollierung.
+    if (tune_err != 0)
+    {
+        ::printf("can't tune: %d (%d)\n", tune_err, errno);
+    }
+#endif
 
     return true;
 }
