@@ -9,11 +9,12 @@
 class ThreadTools
 {
 private:
-    static void ignore_signal(int signal)
+    static void ignore_signal(int signo)
     {
 #ifdef DEBUG
-        ::printf("caught %d\n", signal);
+        ::printf("caught %d\n", signo);
 #endif
+        signal();
     }
 
 public:

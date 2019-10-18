@@ -56,6 +56,8 @@ private:
     std::thread *_status;
     // Synchronisation der Datenstrukturen.
     std::mutex _lock;
+    // Synchronisation der Kommunikation.
+    std::mutex _client;
 
 private:
     // Überwachung des Empfangssignals.

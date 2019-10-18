@@ -138,39 +138,34 @@ void Frontend::waitRequest()
 // Beendet die Verwaltung implizit nach einem Fehler mit dem Steuerkanal.
 void Frontend::close(bool nowait)
 {
-    // Steuerkanal schliessen.
-    auto tcp = _tcp;
-
-    if (tcp < 0)
-    {
-        return;
-    }
-
-    _tcp = -1;
-
-    ::close(tcp);
-
-    // Überwachung des Steuerkanals beendet.
-    ThreadTools::join(_listener, nowait);
-
     // Dateihandle zum Frontend schliessen.
     auto fd = _fd;
 
-    if (fd < 0)
+    if (fd >= 0)
     {
-        return;
+        _fd = -1;
+
+        // Alle angemeldeten Filter beenden.
+        removeAllFilters();
+
+        ::close(fd);
     }
-
-    _fd = -1;
-
-    // Alle angemeldeten Filter beenden.
-    removeAllFilters();
-
-    // Verbindung schliessen.
-    ::close(fd);
 
     // Signalüberwachung beenden.
     ThreadTools::join(_status);
+
+    // Steuerkanal schliessen.
+    auto tcp = _tcp;
+
+    if (tcp >= 0)
+    {
+        _tcp = -1;
+
+        ::close(tcp);
+
+        // Überwachung des Steuerkanals beendet.
+        ThreadTools::join(_listener, nowait);
+    }
 
 #ifdef DEBUG
     // Protokollierung.
@@ -278,7 +273,7 @@ void Frontend::sendResponse(response *data, int payloadSize)
     data->len = payloadSize;
 
     // Kontroll- und Steuerdaten als Einheit senden.
-    Locker _self(_lock);
+    Locker _self(_client);
 
-    write(_tcp, data, sizeof(response) + payloadSize);
+    ::send(_tcp, data, sizeof(response) + payloadSize, MSG_NOSIGNAL | MSG_DONTWAIT);
 }

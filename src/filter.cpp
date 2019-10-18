@@ -1,8 +1,11 @@
 #include "filter.hpp"
-#include "frontend.hpp"
-#include "threadTools.hpp"
 
 #include <fcntl.h>
+#include <linux/dvb/dmx.h>
+#include <sys/ioctl.h>
+
+#include "frontend.hpp"
+#include "threadTools.hpp"
 
 /*
     Liest einen Datenstrom (einzelne PID) vom Demultiplexer und meldet
@@ -39,6 +42,25 @@ void Filter::feeder()
         if (bytes <= 0)
         {
             break;
+        }
+
+        // Leere Pakete überspringen - später mal klären, was das soll!
+        if (bytes == bufsize)
+        {
+            auto nonZero = false;
+
+            for (auto i = 0; i < bytes; i++)
+            {
+                if (nonZero = buffer[i])
+                {
+                    break;
+                }
+            }
+
+            if (!nonZero)
+            {
+                continue;
+            }
         }
 
         // An den Client durchreichen.
