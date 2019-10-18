@@ -34,7 +34,7 @@ bool Frontend::processTune()
     auto loFreq = useSwitch && transponder.frequency < transponder.lnbSwitch;
     auto freq = transponder.frequency - (hiFreq ? transponder.lnb2 : 0) - (loFreq ? transponder.lnb1 : 0);
 
-    DiSEqCMessage diseqc(DiSEqCMessage::create(diseqc_modes::diseqc1, hiFreq, transponder.horizontal));
+    DiSEqCMessage diseqc(DiSEqCMessage::create(transponder.lnbMode, hiFreq, transponder.horizontal));
 
     // Umschaltung vornehmen - Fehlerbehandlung explizit deaktiviert.
     diseqc.send(_fd);

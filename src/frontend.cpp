@@ -1,14 +1,14 @@
 #include "frontend.hpp"
 
-#include "manager.hpp"
-#include "sectionFilter.hpp"
-#include "streamFilter.hpp"
-#include "threadTools.hpp"
-
 #include <fcntl.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+
+#include "manager.hpp"
+#include "sectionFilter.hpp"
+#include "streamFilter.hpp"
+#include "threadTools.hpp"
 
 // Erstellt eine neue Verwaltung für ein Frontend.
 Frontend::Frontend(int tcp, FrontendManager *manager)

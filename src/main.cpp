@@ -124,14 +124,29 @@ int main()
         .symbolrate = 22000000,
         .horizontal = true,
         .innerFEC = fe_code_rate::FEC_5_6,
-        .s2 = true,
+        .s2 = false,
+        .rolloff = fe_rolloff::ROLLOFF_AUTO,
+    };
+
+    SatelliteTune e4p1 = {
+        .lnbMode = diseqc_modes::diseqc2,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
+        .modulation = fe_modulation::QPSK,
+        .frequency = 10936500,
+        .symbolrate = 22000000,
+        .horizontal = false,
+        .innerFEC = fe_code_rate::FEC_5_6,
+        .s2 = false,
         .rolloff = fe_rolloff::ROLLOFF_AUTO,
     };
 
     auto tr = frontend_request::tune;
 
     ::write(fd, &tr, sizeof(tr));
-    ::write(fd, &zdfhd, sizeof(zdfhd));
+    ::write(fd, &e4p1, sizeof(SatelliteTune));
 
     ::sleep(1);
 

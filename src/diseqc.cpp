@@ -1,7 +1,10 @@
 #include "diseqc.hpp"
 
-#include <linux/dvb/frontend.h>
+#include <errno.h>
+#include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <linux/dvb/frontend.h>
 #include <sys/ioctl.h>
 
 /*
@@ -20,7 +23,15 @@ int DiSEqCMessage::send(int fd)
 
     ::memcpy(cmd.msg, message, cmd.msg_len);
 
-    return ::ioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd);
+    auto err = ::ioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd);
+
+#ifdef DEBUG
+    // Protokollierung.
+    if (err != 0)
+    {
+        ::printf("DiSEqC error %d (%d)\n", err, errno);
+    }
+#endif
 }
 
 /*
