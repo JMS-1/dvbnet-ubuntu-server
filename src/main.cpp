@@ -143,15 +143,30 @@ int main()
         .rolloff = fe_rolloff::ROLLOFF_AUTO,
     };
 
+    SatelliteTune radio = {
+        .lnbMode = diseqc_modes::diseqc1,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
+        .modulation = fe_modulation::QPSK,
+        .frequency = 12265500,
+        .symbolrate = 27500000,
+        .horizontal = true,
+        .innerFEC = fe_code_rate::FEC_3_4,
+        .s2 = false,
+        .rolloff = fe_rolloff::ROLLOFF_AUTO,
+    };
+
     auto tr = frontend_request::tune;
 
     ::write(fd, &tr, sizeof(tr));
-    ::write(fd, &e4p1, sizeof(SatelliteTune));
+    ::write(fd, &radio, sizeof(SatelliteTune));
 
     ::sleep(1);
 
-    auto addsect = frontend_request::add_section_filter;
-    __u16 epg = 18;
+    auto addsect = frontend_request::add_stream_filter;
+    __u16 epg = 101;
 
     ::write(fd, &addsect, sizeof(addsect));
     ::write(fd, &epg, sizeof(epg));
