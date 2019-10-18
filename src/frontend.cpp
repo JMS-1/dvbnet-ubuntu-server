@@ -272,8 +272,19 @@ void Frontend::sendResponse(response *data, int payloadSize)
     // Nutzdaten festlegen.
     data->len = payloadSize;
 
+    // Gesamte Länger berechnen.
+    auto bytes = sizeof(response) + payloadSize;
+
     // Kontroll- und Steuerdaten als Einheit senden.
     Locker _self(_client);
 
-    ::send(_tcp, data, sizeof(response) + payloadSize, MSG_NOSIGNAL | MSG_DONTWAIT);
+    auto sent = ::send(_tcp, data, bytes, MSG_NOSIGNAL);
+
+#ifdef DEBUG
+    // Protokollierung.
+    if (sent != bytes)
+    {
+        ::printf("%ld out of %ld (%d)\n", sent, bytes, errno);
+    }
+#endif
 }
