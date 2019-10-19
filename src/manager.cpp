@@ -2,6 +2,52 @@
 #include "threadTools.hpp"
 
 #include <sys/socket.h>
+#include <sys/stat.h>
+
+// Schlüssel zur einfachen Verwaltung von Verbindungen erstellen.
+#define INDEX_LIMIT 1000
+
+int makeKey(int adapter, int frontend)
+{
+    // Die Hardwaregrenze von maximal 1000 DVB Karten mit maximal 1000 Frontends sollte kein Problem sein.
+    if (adapter < 0 || adapter >= INDEX_LIMIT)
+    {
+        return -1;
+    }
+
+    if (frontend < 0 || frontend >= INDEX_LIMIT)
+    {
+        return -1;
+    }
+
+    // Dann ist es auch sehr einfach einen Schlüssel zu erstellen.
+    return (adapter * INDEX_LIMIT) + frontend;
+}
+
+FrontendManager::FrontendManager() : _active(true), _fd(-1), _listen(nullptr)
+{
+    // Alle bekannten Frontends ermitteln;
+    struct stat buffer;
+    char path[40];
+
+    for (auto adapter = 0;; ++adapter)
+    {
+        auto frontend = 0;
+
+        while (true)
+        {
+            ::sprintf(path, "/dev/dvb/adapter%i/frontend%i", adapter, frontend);
+
+            if (::stat(path, &buffer) == 0)
+                _available.push_back(makeKey(adapter, frontend++));
+            else
+                break;
+        }
+
+        if (frontend == 0)
+            break;
+    }
+}
 
 // Überwacht eingehende Verbindung - jede Verbindung erstellt ein Frontend.
 void FrontendManager::listener()
@@ -128,22 +174,24 @@ FrontendManager::~FrontendManager()
     close();
 }
 
-// Schlüssel zur einfachen Verwaltung von Verbindungen erstellen.
-int makeKey(int adapter, int frontend)
+// Sucht die nächste nicht verwendete Karte.
+void FrontendManager::allocate(int &adapter, int &frontend)
 {
-    // Die Hardwaregrenze von maximal 1000 DVB Karten mit maximal 1000 Frontends sollte kein Problem sein.
-    if (adapter < 0 || adapter > 999)
-    {
-        return -1;
-    }
+    // Nichts gefunden.
+    adapter = -1;
+    frontend = -1;
 
-    if (frontend < 0 || frontend > 999)
-    {
-        return -1;
-    }
+    // Sperren.
+    Locker _self(_lock);
 
-    // Dann ist es auch sehr einfach einen Schlüssel zu erstellen.
-    return 1000 * adapter + frontend;
+    for (auto &key : _available)
+        if (_frontends.find(key) == _frontends.end())
+        {
+            adapter = key / INDEX_LIMIT;
+            frontend = key % INDEX_LIMIT;
+
+            break;
+        }
 }
 
 // Trägte ein Frontend in die Verwaltung ein.

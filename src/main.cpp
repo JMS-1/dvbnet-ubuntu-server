@@ -163,15 +163,13 @@ int main()
     ::write(fd, &tr, sizeof(tr));
     ::write(fd, &radio, sizeof(SatelliteTune));
 
-    ::sleep(1);
-
-    auto addsect = frontend_request::add_stream_filter;
-    __u16 epg = 101;
+    auto addsect = frontend_request::add_section_filter;
+    __u16 epg = 18;
 
     ::write(fd, &addsect, sizeof(addsect));
     ::write(fd, &epg, sizeof(epg));
 
-    ::sleep(15);
+    ::sleep(120);
 
     printf("done\n");
 

@@ -33,6 +33,8 @@ void Filter::feeder()
     // Nutzdatenbereich ermitteln.
     auto buffer = data->payload;
 
+    ssize_t total = 0;
+
     for (;;)
     {
         // Daten aus dem Demultiplexer auslesen.
@@ -65,6 +67,9 @@ void Filter::feeder()
 
         // An den Client durchreichen.
         _frontend.sendResponse(data, bytes);
+
+        // Statistik.
+        total += bytes;
     }
 
     // Übergabebereich kann nun wieder freigegeben werden.
@@ -72,7 +77,7 @@ void Filter::feeder()
 
 #ifdef DEBUG
     // Protokollausgabe.
-    ::printf("-pid=%d\n", _pid);
+    ::printf("-pid=%d (%ld bytes)\n", _pid, total);
 #endif
 }
 

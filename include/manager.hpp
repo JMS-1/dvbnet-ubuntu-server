@@ -3,6 +3,7 @@
 
 #include <netinet/in.h>
 
+#include <list>
 #include <map>
 #include <mutex>
 #include <thread>
@@ -15,7 +16,7 @@ class FrontendManager
     friend class Frontend;
 
 public:
-    FrontendManager() : _active(true), _fd(-1), _listen(nullptr) {}
+    FrontendManager();
     ~FrontendManager();
 
 private:
@@ -25,6 +26,8 @@ private:
 private:
     // Alle bekannten Verbindungen.
     std::map<int, Frontend *> _frontends;
+    // Alle vorhandenen Frontends.
+    std::list<int> _available;
     // Überwachung neuer Verbindungen.
     std::thread *_listen;
     // Gesetzt während die Verwaltung aktiv ist.
@@ -47,6 +50,8 @@ private:
     void removeFrontend(int adapter, int frontend);
     // Erwartet neue Verbindungen.
     void listener();
+    // Reserviert eine freie Karte.
+    void allocate(int &adapter, int &frontend);
 };
 
 #endif

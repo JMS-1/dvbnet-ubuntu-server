@@ -24,6 +24,16 @@ bool Frontend::processConnect()
         return false;
     }
 
+    // Freies Frontend ermitteln.
+    auto manager = _manager;
+
+    if (!manager)
+    {
+        return false;
+    }
+
+    manager->allocate(adapter, frontend);
+
     // Dateizugriff erstellen.
     char path[40];
 
@@ -37,13 +47,6 @@ bool Frontend::processConnect()
     }
 
     // Anmeldung bei der Frontendverwaltung.
-    auto manager = _manager;
-
-    if (!manager)
-    {
-        return false;
-    }
-
     if (!manager->addFrontend(this))
     {
         return false;
