@@ -3,6 +3,7 @@
 #include "manager.hpp"
 
 #include <fcntl.h>
+#include <sys/ioctl.h>
 
 /*
     Verbindet ein nicht konfigurierte Verwaltung eines Frontends
@@ -51,6 +52,17 @@ bool Frontend::processConnect()
     {
         return false;
     }
+
+    // Spannung setzen.
+    auto voltage_err = ::ioctl(_fd, FE_SET_VOLTAGE, SEC_VOLTAGE_13);
+
+#ifdef DEBUG
+    // Protokollierung.
+    if (voltage_err != 0)
+    {
+        ::printf("can't set LNB voltage: %d (%d)\n", voltage_err, errno);
+    }
+#endif
 
     // Ständige Signalüberwachung aktivieren.
     _status = new std::thread(&Frontend::readStatus, this);
