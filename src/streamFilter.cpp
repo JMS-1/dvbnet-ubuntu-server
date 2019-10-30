@@ -12,9 +12,7 @@ bool StreamFilter::start()
     auto fd = open();
 
     if (fd < 0)
-    {
         return false;
-    }
 
     // Vergrößerten Zwischenspeicher anlegen.
     ::ioctl(fd, DMX_SET_BUFFER_SIZE, DVBNET_FILTER_STREAM_BUFFER);
