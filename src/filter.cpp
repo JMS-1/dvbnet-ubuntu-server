@@ -33,6 +33,7 @@ void Filter::feeder()
     // Nutzdatenbereich ermitteln.
     auto buffer = data->payload;
 
+    auto overflow = 0;
     ssize_t total = 0;
 
     for (;;)
@@ -43,7 +44,12 @@ void Filter::feeder()
         // Sobald keine Daten mehr ankommen wird das Auslesen beendet.
         if (bytes <= 0)
         {
-            break;
+            if (errno != EOVERFLOW)
+                break;
+
+            overflow++;
+
+            continue;
         }
 
         // Leere Pakete überspringen - später mal klären, was das soll!
@@ -52,17 +58,11 @@ void Filter::feeder()
             auto nonZero = false;
 
             for (auto i = 0; i < bytes; i++)
-            {
                 if (nonZero = buffer[i])
-                {
                     break;
-                }
-            }
 
             if (!nonZero)
-            {
                 continue;
-            }
         }
 
         // An den Client durchreichen.
@@ -77,7 +77,7 @@ void Filter::feeder()
 
 #ifdef DEBUG
     // Protokollausgabe.
-    ::printf("-pid=%d (%ld bytes)\n", _pid, total);
+    ::printf("-pid=%d (%ld bytes) (%d)\n", _pid, total, overflow);
 #endif
 }
 
@@ -90,9 +90,7 @@ void Filter::stop()
     const auto fd = _fd;
 
     if (fd < 0)
-    {
         return;
-    }
 
     _fd = -1;
 
@@ -122,9 +120,7 @@ int Filter::open()
 
     // Das dürfen wir gar nicht mehr.
     if (!_active)
-    {
         return false;
-    }
 
     // Dateihanlde anlegen.
     char path[40];
@@ -143,7 +139,5 @@ int Filter::open()
 void Filter::startThread()
 {
     if (!_thread)
-    {
         _thread = new std::thread(&Filter::feeder, this);
-    }
 }

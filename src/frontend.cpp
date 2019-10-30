@@ -278,13 +278,5 @@ void Frontend::sendResponse(response *data, int payloadSize)
     // Kontroll- und Steuerdaten als Einheit senden.
     Locker _self(_client);
 
-    auto sent = ::send(_tcp, data, bytes, MSG_NOSIGNAL | MSG_DONTWAIT);
-
-#ifdef DEBUG
-    // Protokollierung.
-    if (sent != bytes)
-    {
-        ::printf("%ld out of %ld (%d)\n", sent, bytes, errno);
-    }
-#endif
+    ::send(_tcp, data, bytes, MSG_NOSIGNAL | MSG_DONTWAIT);
 }

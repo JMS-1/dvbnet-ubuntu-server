@@ -161,15 +161,15 @@ int main()
     auto tr = frontend_request::tune;
 
     ::write(fd, &tr, sizeof(tr));
-    ::write(fd, &radio, sizeof(SatelliteTune));
+    ::write(fd, &zdfhd, sizeof(SatelliteTune));
 
-    auto addsect = frontend_request::add_section_filter;
-    __u16 epg = 18;
+    auto addsect = frontend_request::add_stream_filter;
+    __u16 pid = 6110;
 
     ::write(fd, &addsect, sizeof(addsect));
-    ::write(fd, &epg, sizeof(epg));
+    ::write(fd, &pid, sizeof(pid));
 
-    ::sleep(120);
+    ::sleep(10);
 
     printf("done\n");
 
