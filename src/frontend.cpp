@@ -15,7 +15,6 @@ Frontend::Frontend(int tcp, FrontendManager *manager)
       _fd(-1),
       _filter(nullptr),
       _manager(manager),
-      _status(nullptr),
       _tcp(tcp),
       adapter(adapter),
       frontend(frontend)
@@ -156,9 +155,6 @@ void Frontend::close(bool nowait)
         ::close(fd);
     }
 
-    // Signalüberwachung beenden.
-    ThreadTools::join(_status);
-
     // Steuerkanal schliessen.
     auto tcp = _tcp;
 
@@ -175,62 +171,6 @@ void Frontend::close(bool nowait)
 #ifdef DEBUG
     // Protokollierung.
     ::printf("%d/%d ended\n", adapter, frontend);
-#endif
-}
-
-// Überwacht das Empfangssignal.
-void Frontend::readStatus()
-{
-    ::ThreadTools::signal();
-
-#ifdef DEBUG
-    // Protokollierung.
-    ::printf("+status %d/%d\n", adapter, frontend);
-#endif
-
-    // Protokollstruktur anlegen.
-    response *data = reinterpret_cast<response *>(::malloc(sizeof(response) + sizeof(signal_response)));
-
-    // Protokollstruktur vorbereiten.
-    data->type = frontend_response::signal_status;
-    data->pid = 0;
-
-    // Zugriff auf die Signaldaten.
-    auto &signal = *reinterpret_cast<signal_response *>(data->payload);
-
-    for (;; ::sleep(5))
-    {
-        // Detaildaten auslesen.
-        if (::ioctl(_fd, FE_READ_STATUS, &signal.status) != 0)
-        {
-            break;
-        }
-
-        if (::ioctl(_fd, FE_READ_SIGNAL_STRENGTH, &signal.strength) != 0)
-        {
-            break;
-        }
-
-        if (::ioctl(_fd, FE_READ_SNR, &signal.snr) != 0)
-        {
-            break;
-        }
-
-        if (::ioctl(_fd, FE_READ_BER, &signal.ber) != 0)
-        {
-            break;
-        }
-
-        // Informationen an den Client melden.
-        sendResponse(data, sizeof(signal_response));
-    }
-
-    // Protokollstruktur freigeben.
-    ::free(data);
-
-#ifdef DEBUG
-    // Protokollierung.
-    ::printf("-status %d/%d\n", adapter, frontend);
 #endif
 }
 

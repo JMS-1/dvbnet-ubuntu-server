@@ -42,34 +42,9 @@ struct connect_request
     int frontend;
 };
 
-// Meldungen an den Client.
-enum frontend_response
-{
-    section = 0,
-    signal_status = 1,
-    stream = 2,
-};
-
-// Informationen über das Empfangssignal.
-struct signal_response
-{
-    // Allgemeiner Status.
-    fe_status status;
-    // Güte.
-    __u16 snr;
-    // Stärke.
-    __u16 strength;
-    // Fehlerkorrektur.
-    __u32 ber;
-};
-
 // Meldung an den Client.
 struct response
 {
-    // Art der Meldung.
-    frontend_response type;
-    // Optionale Datenstromkennung (ignoriert für frontend_response::signal).
-    __u16 pid;
     // Größe der folgenden Nutzdaten in Bytes.
     int len;
     // Nutzdaten.

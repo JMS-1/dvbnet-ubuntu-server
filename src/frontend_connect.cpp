@@ -64,8 +64,5 @@ bool Frontend::processConnect()
     }
 #endif
 
-    // Ständige Signalüberwachung aktivieren.
-    _status = new std::thread(&Frontend::readStatus, this);
-
     return true;
 }

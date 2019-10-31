@@ -181,8 +181,8 @@ int main()
     ::write(fd, &tr, sizeof(tr));
     ::write(fd, &zdfhd, sizeof(SatelliteTune));
 
-    auto addsect = frontend_request::add_stream_filter;
-    __u16 pid = 0x2000;
+    auto addsect = frontend_request::add_section_filter;
+    __u16 pid = 18;
 
     ::write(fd, &addsect, sizeof(addsect));
     ::write(fd, &pid, sizeof(pid));
@@ -202,7 +202,7 @@ int main()
         auto buffer = ::malloc(response.len);
         auto bytes = readBuffer(fd, buffer, response.len);
 
-        if (bytes == response.len && response.type == frontend_response::stream)
+        if (bytes == response.len)
         {
             ::write(wr, buffer, bytes);
 

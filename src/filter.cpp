@@ -30,10 +30,6 @@ void Filter::feeder()
     // Zusätzlich zu den Nutzdaten muss auch immer die Kontrollstruktur aufgesetzt werden.
     response *data = reinterpret_cast<response *>(::malloc(sizeof(response) + 2 * (bufsize + TSPACKETSIZE)));
 
-    // Kontrollstruktur aufbereiten.
-    data->type = frontend_response::stream;
-    data->pid = 0x2000;
-
     // Nutzdatenbereich ermitteln.
     auto payload = data->payload;
     auto buffer = payload + bufsize + TSPACKETSIZE;

@@ -52,16 +52,12 @@ private:
     Filter *_filter;
     // Entgegennahme von Steuerbefehlen des Clients.
     std::thread *_listener;
-    // Überwachung des Empfangssignals.
-    std::thread *_status;
     // Synchronisation der Datenstrukturen.
     std::mutex _lock;
     // Synchronisation der Kommunikation.
     std::mutex _client;
 
 private:
-    // Überwachung des Empfangssignals.
-    void readStatus();
     // Liest Steuerdaten des Clients ein.
     bool readblock(void *buffer, int len);
     // Wertet Steuerdaten des Clients aus.
