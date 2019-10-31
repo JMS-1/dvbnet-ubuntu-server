@@ -1,11 +1,15 @@
 #include "filter.hpp"
 
 #include <fcntl.h>
+#include <string.h>
 #include <linux/dvb/dmx.h>
 #include <sys/ioctl.h>
 
 #include "frontend.hpp"
 #include "threadTools.hpp"
+
+#define TSPACKETSIZE 188
+#define TSMAGICBYTE 0x47
 
 /*
     Liest einen Datenstrom (einzelne PID) vom Demultiplexer und meldet
@@ -21,25 +25,28 @@ void Filter::feeder()
 #endif
 
     // Die Größe des Zwischenspeichers orientiert sich an der Art des Datenstroms.
-    const auto bufsize = 10 * 1024;
+    const auto bufsize = 100 * TSPACKETSIZE;
 
     // Zusätzlich zu den Nutzdaten muss auch immer die Kontrollstruktur aufgesetzt werden.
-    response *data = reinterpret_cast<response *>(::malloc(sizeof(response) + bufsize));
+    response *data = reinterpret_cast<response *>(::malloc(sizeof(response) + 2 * (bufsize + TSPACKETSIZE)));
 
     // Kontrollstruktur aufbereiten.
     data->type = _type;
     data->pid = _pid;
 
     // Nutzdatenbereich ermitteln.
-    auto buffer = data->payload;
+    auto payload = data->payload;
+    auto buffer = payload + bufsize + TSPACKETSIZE;
+    auto prev = 0;
 
     auto overflow = 0;
+    auto skipped = 0;
     ssize_t total = 0;
 
     for (;;)
     {
         // Daten aus dem Demultiplexer auslesen.
-        auto bytes = read(_fd, buffer, bufsize);
+        auto bytes = read(_fd, buffer + prev, bufsize);
 
         // Sobald keine Daten mehr ankommen wird das Auslesen beendet.
         if (bytes < 0)
@@ -52,24 +59,53 @@ void Filter::feeder()
             continue;
         }
 
-        // Leere Pakete überspringen - später mal klären, was das soll!
-        if (bytes == bufsize)
-        {
-            auto nonZero = false;
-
-            for (auto i = 0; i < bytes; i++)
-                if (nonZero = buffer[i])
-                    break;
-
-            if (!nonZero)
-                continue;
-        }
-
-        // An den Client durchreichen.
-        _frontend.sendResponse(data, bytes);
-
         // Statistik.
         total += bytes;
+
+        // Aktueller Analysebereich.
+        bytes += prev;
+
+        // Nutzdatenbereich füllen.
+        auto source = buffer, end = buffer + bytes, dest = payload;
+
+        while (source < end)
+            if (*source != TSMAGICBYTE)
+            {
+                // Wir haben noch nicht den Anfang eines TS Paketes erreicht.
+                skipped++;
+                source++;
+            }
+            else if (source + TSPACKETSIZE >= end)
+            {
+                // Das TS Paket ist noch unvollständig.
+                break;
+            }
+            else if (source[TSPACKETSIZE] != TSMAGICBYTE)
+            {
+                // Es ist kein TS Paket.
+                skipped++;
+                source++;
+            }
+            else
+            {
+                // TS Paket übernehmen.
+                ::memcpy(dest, source, TSPACKETSIZE);
+
+                dest += TSPACKETSIZE;
+
+                // Nächstes Paket.
+                source += TSPACKETSIZE;
+            }
+
+        // Angebrochenes Paket übernehmen.
+        prev = end - source;
+
+        if (prev > 0)
+            ::memcpy(buffer, source, prev);
+
+        // An den Client durchreichen.
+        if (dest > payload)
+            _frontend.sendResponse(data, dest - payload);
     }
 
     // Übergabebereich kann nun wieder freigegeben werden.
@@ -77,7 +113,7 @@ void Filter::feeder()
 
 #ifdef DEBUG
     // Protokollausgabe.
-    ::printf("-pid=%d (%ld bytes) (%d)\n", _pid, total, overflow);
+    ::printf("-pid=%d (%ld bytes) (%d/%d)\n", _pid, total, overflow, skipped);
 #endif
 }
 

@@ -1,5 +1,5 @@
 //#define DUMP_STRUCT_LAYOUT
-//#define RUN_TEST
+#define RUN_TEST
 
 #include <fcntl.h>
 #include <netdb.h>
@@ -190,7 +190,7 @@ int main()
     auto wr = ::open("dump.bin", O_CREAT | O_TRUNC | O_WRONLY, 0x777);
     size_t total = 0;
 
-    for (int end = ::time(nullptr) + 120; ::time(nullptr) < end;)
+    for (int end = ::time(nullptr) + 60; ::time(nullptr) < end;)
     {
         response response;
 
