@@ -1,6 +1,6 @@
 #include "frontend.hpp"
 
-#include "streamFilter.hpp"
+#include "filter.hpp"
 
 // Aktiviert den Empfang von Nutzdaten.
 bool Frontend::processAddStream()
@@ -19,16 +19,14 @@ bool Frontend::processAddStream()
         return false;
     }
 
-    // Immer den aktuellen Empfang deaktivieren.
-    removeFilter(pid);
+    // Filter einmalig anlegen.
+    if (!_filter)
+    {
+        _filter = new Filter(*this);
 
-    // Empfangsverwaltung anlegen und vermerken.
-    auto filter = new StreamFilter(*this, pid);
-
-    _filters[pid] = filter;
-
-    // Entgegennahme der Nutzdaten aktivieren - Fehlerbehandlung ist bewußt deaktiviert.
-    filter->start();
+        if (!_filter->open())
+            return false;
+    }
 
     return true;
 }

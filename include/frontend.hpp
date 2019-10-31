@@ -49,7 +49,7 @@ private:
     // Zu verwendendes Frontend des DVB Adapters.
     int frontend;
     // Alle angemeldeten Datenströme.
-    std::map<__u16, Filter *> _filters;
+    Filter *_filter;
     // Entgegennahme von Steuerbefehlen des Clients.
     std::thread *_listener;
     // Überwachung des Empfangssignals.

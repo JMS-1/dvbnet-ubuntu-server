@@ -21,7 +21,7 @@ void Filter::feeder()
 
 #ifdef DEBUG
     // Protokollausgabe.
-    ::printf("+pid=%d\n", _pid);
+    ::printf("+feeder\n");
 #endif
 
     // Die Größe des Zwischenspeichers orientiert sich an der Art des Datenstroms.
@@ -31,8 +31,8 @@ void Filter::feeder()
     response *data = reinterpret_cast<response *>(::malloc(sizeof(response) + 2 * (bufsize + TSPACKETSIZE)));
 
     // Kontrollstruktur aufbereiten.
-    data->type = _type;
-    data->pid = _pid;
+    data->type = frontend_response::stream;
+    data->pid = 0x2000;
 
     // Nutzdatenbereich ermitteln.
     auto payload = data->payload;
@@ -113,7 +113,7 @@ void Filter::feeder()
 
 #ifdef DEBUG
     // Protokollausgabe.
-    ::printf("-pid=%d (%ld bytes) (%d/%d)\n", _pid, total, overflow, skipped);
+    ::printf("-feeder (%ld bytes) (%d/%d)\n", total, overflow, skipped);
 #endif
 }
 
@@ -132,7 +132,7 @@ void Filter::stop()
 
 #ifdef DEBUG
     // Protokollausgabe.
-    ::printf("close pid %d fd %d\n", _pid, fd);
+    ::printf("close filter %d\n", fd);
 #endif
 
     ::close(fd);
@@ -142,14 +142,14 @@ void Filter::stop()
 
 #ifdef DEBUG
     // Protokollausgabe.
-    ::printf("%d stopped\n", _pid);
+    ::printf("filter stopped\n");
 #endif
 }
 
 /*
     Erstellt einen Dateizugriff auf den Demultiplexer.
 */
-int Filter::open()
+bool Filter::open()
 {
     // Immer zuerst alles stoppen.
     stop();
@@ -165,8 +165,33 @@ int Filter::open()
 
     _fd = ::open(path, O_RDWR);
 
+    if (_fd < 0)
+        return false;
+
+    // Vergrößerten Zwischenspeicher anlegen.
+    ::ioctl(_fd, DMX_SET_BUFFER_SIZE, 10 * 1024 * 1024);
+
+    // Datenstrom beim Demultiplexer anmelden.
+    dmx_pes_filter_params filter = {
+        0x2000,
+        dmx_input::DMX_IN_FRONTEND,
+        dmx_output::DMX_OUT_TAP,
+        dmx_ts_pes::DMX_PES_OTHER,
+        DMX_IMMEDIATE_START};
+
+    if (::ioctl(_fd, DMX_SET_PES_FILTER, &filter) != 0)
+    {
+        // Entgegennahme der Daten nicht möglich.
+        stop();
+
+        return false;
+    }
+
+    // Entgegennahme der Daten und Weitergabe aktivieren.
+    startThread();
+
     // Ergebnis melden.
-    return _fd;
+    return true;
 }
 
 /*

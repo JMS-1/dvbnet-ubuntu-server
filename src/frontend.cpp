@@ -5,15 +5,15 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include "filter.hpp"
 #include "manager.hpp"
-#include "sectionFilter.hpp"
-#include "streamFilter.hpp"
 #include "threadTools.hpp"
 
 // Erstellt eine neue Verwaltung für ein Frontend.
 Frontend::Frontend(int tcp, FrontendManager *manager)
     : _active(true),
       _fd(-1),
+      _filter(nullptr),
       _manager(manager),
       _status(nullptr),
       _tcp(tcp),
@@ -239,20 +239,6 @@ void Frontend::removeFilter(__u16 pid)
 {
     // Synchronisation.
     Locker _self(_lock);
-
-    // Wir prüfen erst einmal ob es den Eintrag überhaupt gibt.
-    auto filter = _filters.find(pid);
-
-    if (filter == _filters.end())
-    {
-        return;
-    }
-
-    // Eintrag entfernen.
-    _filters.erase(pid);
-
-    // Datenempfang beenden.
-    delete filter->second;
 }
 
 // Gesamten Datenempfang beenden.
@@ -261,14 +247,14 @@ void Frontend::removeAllFilters()
     // Synchronisation.
     Locker _self(_lock);
 
-    // Datenempfang beenden.
-    for (auto &filter : _filters)
-    {
-        delete filter.second;
-    }
+    auto filter = _filter;
 
-    // Verwaltung löschen.
-    _filters.clear();
+    if (filter)
+    {
+        _filter = nullptr;
+
+        delete filter;
+    }
 }
 
 // Sendet Daten an den Client.

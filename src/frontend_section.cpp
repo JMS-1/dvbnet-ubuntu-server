@@ -1,6 +1,6 @@
 #include "frontend.hpp"
 
-#include "sectionFilter.hpp"
+#include "filter.hpp"
 
 // Aktiviert den Empfang von Kontrolldaten.
 bool Frontend::processAddSection()
@@ -19,16 +19,14 @@ bool Frontend::processAddSection()
         return false;
     }
 
-    // Aktuellen Empfang deaktivieren.
-    removeFilter(pid);
+    // Filter einmalig anlegen.
+    if (!_filter)
+    {
+        _filter = new Filter(*this);
 
-    // Empfang anlegen und vermerken.
-    auto filter = new SectionFilter(*this, pid);
-
-    _filters[pid] = filter;
-
-    // Entgegennahme aktivieren - es wird bewußt auf eine Fehlerauswertung verzichtet.
-    filter->start();
+        if (!_filter->open())
+            return false;
+    }
 
     return true;
 }
