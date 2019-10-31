@@ -21,7 +21,7 @@ void Filter::feeder()
 #endif
 
     // Die Größe des Zwischenspeichers orientiert sich an der Art des Datenstroms.
-    auto bufsize = _type == frontend_response::section ? 1024 : DVBNET_FILTER_STREAM_BUFFER;
+    const auto bufsize = 10 * 1024;
 
     // Zusätzlich zu den Nutzdaten muss auch immer die Kontrollstruktur aufgesetzt werden.
     response *data = reinterpret_cast<response *>(::malloc(sizeof(response) + bufsize));
@@ -42,7 +42,7 @@ void Filter::feeder()
         auto bytes = read(_fd, buffer, bufsize);
 
         // Sobald keine Daten mehr ankommen wird das Auslesen beendet.
-        if (bytes <= 0)
+        if (bytes < 0)
         {
             if (errno != EOVERFLOW)
                 break;

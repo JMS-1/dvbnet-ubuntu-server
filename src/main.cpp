@@ -8,6 +8,24 @@
 
 #include "manager.hpp"
 
+int readBuffer(int fd, void *buf, int len)
+{
+    auto dest = static_cast<char *>(buf);
+
+    for (auto rest = len; rest > 0;)
+    {
+        auto bytes = ::read(fd, dest, rest);
+
+        if (bytes <= 0)
+            return -1;
+
+        dest += bytes;
+        rest -= bytes;
+    }
+
+    return len;
+}
+
 int main()
 {
 #ifdef DUMP_STRUCT_LAYOUT
@@ -164,14 +182,42 @@ int main()
     ::write(fd, &zdfhd, sizeof(SatelliteTune));
 
     auto addsect = frontend_request::add_stream_filter;
-    __u16 pid = 6110;
+    __u16 pid = 0x2000;
 
     ::write(fd, &addsect, sizeof(addsect));
     ::write(fd, &pid, sizeof(pid));
 
-    ::sleep(10);
+    auto wr = ::open("dump.bin", O_CREAT | O_TRUNC | O_WRONLY, 0x777);
+    size_t total = 0;
 
-    printf("done\n");
+    for (int end = ::time(nullptr) + 120; ::time(nullptr) < end;)
+    {
+        response response;
+
+        auto resp = readBuffer(fd, &response, sizeof(response));
+
+        if (resp != sizeof(response))
+            break;
+
+        auto buffer = ::malloc(response.len);
+        auto bytes = readBuffer(fd, buffer, response.len);
+
+        if (bytes == response.len && response.type == frontend_response::stream)
+        {
+            ::write(wr, buffer, bytes);
+
+            total += bytes;
+        }
+
+        ::free(buffer);
+
+        if (bytes != response.len)
+            break;
+    }
+
+    ::close(wr);
+
+    printf("done %ld\n", total);
 
     ::close(fd);
 #endif

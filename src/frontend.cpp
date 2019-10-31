@@ -20,6 +20,11 @@ Frontend::Frontend(int tcp, FrontendManager *manager)
       adapter(adapter),
       frontend(frontend)
 {
+    // Zwischenspeicher konfigurieren.
+    auto buffer = 10 * 1024 * 1024;
+
+    ::setsockopt(_tcp, SOL_SOCKET, SO_SNDBUF, &buffer, sizeof(buffer));
+
     // Beginnt mit der Überwachung von eingegenden Steuermeldungen.
     _listener = new std::thread(&Frontend::waitRequest, this);
 }
