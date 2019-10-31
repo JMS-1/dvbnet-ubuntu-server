@@ -52,8 +52,6 @@ private:
     Filter *_filter;
     // Entgegennahme von Steuerbefehlen des Clients.
     std::thread *_listener;
-    // Synchronisation der Datenstrukturen.
-    std::mutex _lock;
     // Synchronisation der Kommunikation.
     std::mutex _client;
 
@@ -66,22 +64,18 @@ private:
     bool processConnect();
     // Wechselt den Transponder.
     bool processTune();
-    // Aktiviert den Empfang von Steuerdaten.
-    bool processAddSection();
-    // Aktiviert den Empfang von Nutzdaten.
-    bool processAddStream();
+    // Aktiviert den Empfang von Daten.
+    bool processAddFilter();
     // Deaktiviert den Datenempfang eines Datenstroms.
     bool processRemoveFilter();
     // Deaktiviert den Datenempfang alles Datenströme.
     bool processRemoveAllFilters();
     // Beendet diese Verwaltung.
     void close(bool nowait);
-    // Entfernt den Empfang eines einzelnen Datenstroms.
-    void removeFilter(__u16 pid);
     // Beendet den Empfang alles Datenströme.
     void removeAllFilters();
     // Sendet Nutzdaten an den Client.
-    void sendResponse(response *data, int payloadSize);
+    void sendResponse(const void *data, int bytes);
 };
 
 #endif

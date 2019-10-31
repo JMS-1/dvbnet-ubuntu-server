@@ -28,16 +28,14 @@ void Filter::feeder()
     const auto bufsize = 100 * TSPACKETSIZE;
 
     // Zusätzlich zu den Nutzdaten muss auch immer die Kontrollstruktur aufgesetzt werden.
-    response *data = reinterpret_cast<response *>(::malloc(sizeof(response) + 2 * (bufsize + TSPACKETSIZE)));
+    auto payload = reinterpret_cast<u_char *>(::malloc(2 * (bufsize + TSPACKETSIZE)));
 
     // Nutzdatenbereich ermitteln.
-    auto payload = data->payload;
     auto buffer = payload + bufsize + TSPACKETSIZE;
     auto prev = 0;
 
+    ssize_t skipped = 0, total = 0;
     auto overflow = 0;
-    auto skipped = 0;
-    ssize_t total = 0;
 
     for (;;)
     {
@@ -84,10 +82,18 @@ void Filter::feeder()
             }
             else
             {
-                // TS Paket übernehmen.
-                ::memcpy(dest, source, TSPACKETSIZE);
+                // PID ermitteln.
+                auto pidHigh = static_cast<__u16>(source[1]);
+                auto pidLow = static_cast<__u16>(source[2]);
+                auto pid = (pidHigh << 8) + pidLow;
 
-                dest += TSPACKETSIZE;
+                if (_filters[pid % sizeof(_filters)])
+                {
+                    // TS Paket übernehmen.
+                    ::memcpy(dest, source, TSPACKETSIZE);
+
+                    dest += TSPACKETSIZE;
+                }
 
                 // Nächstes Paket.
                 source += TSPACKETSIZE;
@@ -101,15 +107,15 @@ void Filter::feeder()
 
         // An den Client durchreichen.
         if (dest > payload)
-            _frontend.sendResponse(data, dest - payload);
+            _frontend.sendResponse(payload, dest - payload);
     }
 
     // Übergabebereich kann nun wieder freigegeben werden.
-    ::free(data);
+    ::free(payload);
 
 #ifdef DEBUG
     // Protokollausgabe.
-    ::printf("-feeder (%ld bytes) (%d/%d)\n", total, overflow, skipped);
+    ::printf("-feeder (%ld bytes) (%d/%ld)\n", total, overflow, skipped);
 #endif
 }
 

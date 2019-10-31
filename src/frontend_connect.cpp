@@ -11,14 +11,6 @@
 */
 bool Frontend::processConnect()
 {
-    // Gewünschtes Frontend einlesen.
-    connect_request request;
-
-    if (!readblock(&request, sizeof(request)))
-    {
-        return false;
-    }
-
     // Verwaltung wird bereits beendet.
     if (!_active)
     {

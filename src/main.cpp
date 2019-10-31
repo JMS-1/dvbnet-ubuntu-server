@@ -1,5 +1,5 @@
 //#define DUMP_STRUCT_LAYOUT
-#define RUN_TEST
+//#define RUN_TEST
 
 #include <fcntl.h>
 #include <netdb.h>
@@ -17,7 +17,7 @@ int readBuffer(int fd, void *buf, int len)
         auto bytes = ::read(fd, dest, rest);
 
         if (bytes <= 0)
-            return -1;
+            return len - rest;
 
         dest += bytes;
         rest -= bytes;
@@ -96,10 +96,8 @@ int main()
     }
 
     auto cr = frontend_request::connect_adapter;
-    connect_request cr_data = {.adapter = 0, .frontend = 0};
 
     ::write(fd, &cr, sizeof(cr));
-    ::write(fd, &cr_data, sizeof(cr_data));
 
     SatelliteTune rtlplus = {
         .lnbMode = diseqc_modes::diseqc1,
@@ -181,8 +179,8 @@ int main()
     ::write(fd, &tr, sizeof(tr));
     ::write(fd, &zdfhd, sizeof(SatelliteTune));
 
-    auto addsect = frontend_request::add_section_filter;
-    __u16 pid = 18;
+    auto addsect = frontend_request::add_filter;
+    __u16 pid = 6110;
 
     ::write(fd, &addsect, sizeof(addsect));
     ::write(fd, &pid, sizeof(pid));
@@ -190,29 +188,18 @@ int main()
     auto wr = ::open("dump.bin", O_CREAT | O_TRUNC | O_WRONLY, 0x777);
     size_t total = 0;
 
+    char buffer[100000];
+
     for (int end = ::time(nullptr) + 60; ::time(nullptr) < end;)
     {
-        response response;
+        auto bytes = readBuffer(fd, buffer, sizeof(buffer));
 
-        auto resp = readBuffer(fd, &response, sizeof(response));
-
-        if (resp != sizeof(response))
+        if (bytes <= 0)
             break;
 
-        auto buffer = ::malloc(response.len);
-        auto bytes = readBuffer(fd, buffer, response.len);
+        ::write(wr, buffer, bytes);
 
-        if (bytes == response.len)
-        {
-            ::write(wr, buffer, bytes);
-
-            total += bytes;
-        }
-
-        ::free(buffer);
-
-        if (bytes != response.len)
-            break;
+        total += bytes;
     }
 
     ::close(wr);

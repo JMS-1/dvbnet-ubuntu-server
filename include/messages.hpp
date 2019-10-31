@@ -27,28 +27,11 @@ struct SatelliteTune
 // Mögliche Befehl des Clients.
 enum frontend_request
 {
-    add_section_filter = 0,
-    add_stream_filter = 1,
-    connect_adapter = 2,
-    del_all_filters = 3,
-    del_filter = 4,
-    tune = 5,
-};
-
-// Bezeichnet die gewünschte Hardware (frontend_request::connect_adapter).
-struct connect_request
-{
-    int adapter;
-    int frontend;
-};
-
-// Meldung an den Client.
-struct response
-{
-    // Größe der folgenden Nutzdaten in Bytes.
-    int len;
-    // Nutzdaten.
-    char payload[0];
+    add_filter = 0,
+    connect_adapter = 1,
+    del_all_filters = 2,
+    del_filter = 3,
+    tune = 4,
 };
 
 #endif

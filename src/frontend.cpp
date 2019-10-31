@@ -104,11 +104,8 @@ void Frontend::waitRequest()
         case frontend_request::tune:
             ok = processTune();
             break;
-        case frontend_request::add_section_filter:
-            ok = processAddSection();
-            break;
-        case frontend_request::add_stream_filter:
-            ok = processAddStream();
+        case frontend_request::add_filter:
+            ok = processAddFilter();
             break;
         case frontend_request::del_filter:
             ok = processRemoveFilter();
@@ -174,19 +171,9 @@ void Frontend::close(bool nowait)
 #endif
 }
 
-// Einzelnen Datenempfang beenden.
-void Frontend::removeFilter(__u16 pid)
-{
-    // Synchronisation.
-    Locker _self(_lock);
-}
-
 // Gesamten Datenempfang beenden.
 void Frontend::removeAllFilters()
 {
-    // Synchronisation.
-    Locker _self(_lock);
-
     auto filter = _filter;
 
     if (filter)
@@ -198,15 +185,8 @@ void Frontend::removeAllFilters()
 }
 
 // Sendet Daten an den Client.
-void Frontend::sendResponse(response *data, int payloadSize)
+void Frontend::sendResponse(const void *data, int bytes)
 {
-    // Nutzdaten festlegen.
-    data->len = payloadSize;
-
-    // Gesamte Länger berechnen.
-    auto bytes = sizeof(response) + payloadSize;
-
-    // Kontroll- und Steuerdaten als Einheit senden.
     Locker _self(_client);
 
     ::send(_tcp, data, bytes, MSG_NOSIGNAL | MSG_DONTWAIT);

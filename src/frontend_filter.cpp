@@ -2,8 +2,8 @@
 
 #include "filter.hpp"
 
-// Aktiviert den Empfang von Nutzdaten.
-bool Frontend::processAddStream()
+// Aktiviert den Empfang von Kontrolldaten.
+bool Frontend::processAddFilter()
 {
     // Datenstromkennung auslesen.
     __u16 pid;
@@ -27,6 +27,9 @@ bool Frontend::processAddStream()
         if (!_filter->open())
             return false;
     }
+
+    // Aktivieren.
+    _filter->setFilter(pid, true);
 
     return true;
 }

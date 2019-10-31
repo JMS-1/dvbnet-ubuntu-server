@@ -1,5 +1,7 @@
 #include "frontend.hpp"
 
+#include "filter.hpp"
+
 // Beendet die Entgegennahme eines einzelnen Datenstroms.
 bool Frontend::processRemoveFilter()
 {
@@ -18,7 +20,8 @@ bool Frontend::processRemoveFilter()
     }
 
     // Entgegennahme beendet.
-    removeFilter(pid);
+    if (_filter)
+        _filter->setFilter(pid, false);
 
     return true;
 }
