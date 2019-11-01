@@ -73,7 +73,7 @@ private:
     // Beendet den Empfang alles Datenströme.
     void removeAllFilters();
     // Sendet Nutzdaten an den Client.
-    void sendResponse(const void *data, int bytes);
+    void sendResponse(const void *data, int bytes) const;
 };
 
 #endif

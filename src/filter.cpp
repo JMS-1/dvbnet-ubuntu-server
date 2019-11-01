@@ -11,6 +11,8 @@
 #define TSPACKETSIZE 188
 #define TSMAGICBYTE 0x47
 
+#define BUFFERSIZE (100 * TSPACKETSIZE)
+#define SCRATCHSIZE (BUFFERSIZE + TSPACKETSIZE)
 /*
     Liest einen Datenstrom (einzelne PID) vom Demultiplexer und meldet
     das Ergebnis an die Frontendinstanz zur Weitergabe an den Client.
@@ -24,14 +26,11 @@ void Filter::feeder()
     ::printf("+feeder\n");
 #endif
 
-    // Die Größe des Zwischenspeichers orientiert sich an der Art des Datenstroms.
-    const auto bufsize = 100 * TSPACKETSIZE;
-
     // Zusätzlich zu den Nutzdaten muss auch immer die Kontrollstruktur aufgesetzt werden.
-    auto payload = reinterpret_cast<u_char *>(::malloc(2 * (bufsize + TSPACKETSIZE)));
+    auto payload = reinterpret_cast<u_char *>(::malloc(2 * SCRATCHSIZE));
 
     // Nutzdatenbereich ermitteln.
-    auto buffer = payload + bufsize + TSPACKETSIZE;
+    auto buffer = payload + SCRATCHSIZE;
     auto prev = 0;
 
     ssize_t skipped = 0, total = 0;
@@ -40,11 +39,12 @@ void Filter::feeder()
     for (;;)
     {
         // Daten aus dem Demultiplexer auslesen.
-        auto bytes = read(_fd, buffer + prev, bufsize);
+        auto bytes = read(_fd, buffer + prev, BUFFERSIZE);
 
         // Sobald keine Daten mehr ankommen wird das Auslesen beendet.
         if (bytes < 0)
         {
+            // Es sei denn wir sind einfach nur zu langsam.
             if (errno != EOVERFLOW)
                 break;
 
@@ -60,7 +60,7 @@ void Filter::feeder()
         bytes += prev;
 
         // Nutzdatenbereich füllen.
-        auto source = buffer, end = buffer + bytes, dest = payload;
+        auto source = buffer, end = source + bytes, dest = payload;
 
         while (source < end)
             if (*source != TSMAGICBYTE)
@@ -137,6 +137,10 @@ void Filter::stop()
     ::printf("close filter %d\n", fd);
 #endif
 
+    // Alle Filter schon mal deaktivieren.
+    clearFilter();
+
+    // Verbindung zum Gerät beenden.
     ::close(fd);
 
     // Entgegennahme der Daten beenden.
@@ -156,10 +160,6 @@ bool Filter::open()
     // Immer zuerst alles stoppen.
     stop();
 
-    // Das dürfen wir gar nicht mehr.
-    if (!_active)
-        return false;
-
     // Dateihanlde anlegen.
     char path[40];
 
@@ -175,11 +175,11 @@ bool Filter::open()
 
     // Datenstrom beim Demultiplexer anmelden.
     dmx_pes_filter_params filter = {
-        0x2000,
-        dmx_input::DMX_IN_FRONTEND,
-        dmx_output::DMX_OUT_TAP,
-        dmx_ts_pes::DMX_PES_OTHER,
-        DMX_IMMEDIATE_START};
+        .pid = 0x2000,
+        .input = dmx_input::DMX_IN_FRONTEND,
+        .output = dmx_output::DMX_OUT_TAP,
+        .pes_type = dmx_ts_pes::DMX_PES_OTHER,
+        .flags = DMX_IMMEDIATE_START};
 
     if (::ioctl(_fd, DMX_SET_PES_FILTER, &filter) != 0)
     {
@@ -190,17 +190,8 @@ bool Filter::open()
     }
 
     // Entgegennahme der Daten und Weitergabe aktivieren.
-    startThread();
+    _thread = new std::thread(&Filter::feeder, this);
 
     // Ergebnis melden.
     return true;
-}
-
-/*
-    Startet einmalig die Entgegennahme der Daten.
-*/
-void Filter::startThread()
-{
-    if (!_thread)
-        _thread = new std::thread(&Filter::feeder, this);
 }

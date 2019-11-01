@@ -185,7 +185,7 @@ void Frontend::removeAllFilters()
 }
 
 // Sendet Daten an den Client.
-void Frontend::sendResponse(const void *data, int bytes)
+void Frontend::sendResponse(const void *data, int bytes) const
 {
     ::send(_tcp, data, bytes, MSG_NOSIGNAL | MSG_DONTWAIT);
 }

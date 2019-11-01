@@ -14,34 +14,14 @@ class Frontend;
 class Filter
 {
 public:
-    // Erstellt eine neue Verwaltung für ein bestimmtes Frontend.
-    Filter(Frontend &frontend)
-        : _active(true),
-          _fd(-1),
-          _frontend(frontend),
-          _thread(nullptr)
-    {
-        // Alle Filter zurücksetzen.
-        clearFilter();
-    }
-
-    // Beendet diese Verwaltung.
-    ~Filter()
-    {
-        // Sicherstellen, dass keine neuen Verwaltungen erzeugt werden.
-        _active = false;
-
-        // Endgültig beenden.
-        stop();
-    }
+    Filter(const Frontend &frontend) : _fd(-1), _frontend(frontend), _thread(nullptr) { clearFilter(); }
+    ~Filter() { stop(); }
 
 private:
     // Alle möglichen Datenströme.
-    char _filters[0x2000];
+    u_char _filters[0x2000];
     // Zugehöriges Frontend.
-    Frontend &_frontend;
-    // Gesetzt während die Verwaltung verwendet werden darf.
-    volatile bool _active;
+    const Frontend &_frontend;
     // Dateihandle zum Demultiplexer.
     volatile int _fd;
     // Instanz für die Datenweitergabe.
@@ -50,8 +30,6 @@ private:
 private:
     // Gibt Daten an den Client weiter.
     void feeder();
-    // Beginnt mit der Entgegennahme der Nutzdaten.
-    void startThread();
     // Beendet die Verwaltung.
     void stop();
 

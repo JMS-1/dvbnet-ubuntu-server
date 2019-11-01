@@ -3,32 +3,36 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
+
 #include <linux/dvb/frontend.h>
 #include <sys/ioctl.h>
 
 /*
     Übermittelt einen DiSEqC Steuerbefehl an ein Frontend.
 */
-int DiSEqCMessage::send(int fd)
+void DiSEqCMessage::send(int fd)
 {
-    // Burst-Mode Umschaltung.
-    if (!repeat)
-        return ::ioctl(fd, FE_DISEQC_SEND_BURST, burst ? fe_sec_mini_cmd::SEC_MINI_B : fe_sec_mini_cmd::SEC_MINI_A);
+    int err;
 
-    // Standardumschaltung.
-    dvb_diseqc_master_cmd cmd = {{0}, static_cast<__u8>((repeat == 1) ? 3 : 4)};
+    if (repeat)
+    {
+        // Standardumschaltung.
+        dvb_diseqc_master_cmd cmd = {{0}, static_cast<__u8>((repeat == 1) ? 3 : 4)};
 
-    ::memcpy(cmd.msg, _message, cmd.msg_len);
+        ::memcpy(cmd.msg, _message, cmd.msg_len);
 
-    auto err = ::ioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd);
+        err = ::ioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd);
+    }
+    else
+    {
+        // Burst-Mode Umschaltung.
+        err = ::ioctl(fd, FE_DISEQC_SEND_BURST, burst ? fe_sec_mini_cmd::SEC_MINI_B : fe_sec_mini_cmd::SEC_MINI_A);
+    }
 
 #ifdef DEBUG
     // Protokollierung.
     if (err != 0)
-    {
         ::printf("DiSEqC error %d (%d)\n", err, errno);
-    }
 #endif
 }
 
@@ -38,7 +42,7 @@ int DiSEqCMessage::send(int fd)
 DiSEqCMessage DiSEqCMessage::create(diseqc_modes mode, bool highFrequency, bool horizontal)
 {
     // Vorauswahl für die Standardumschaltung.
-    __u8 choice = 0;
+    u_char choice = 0;
 
     if (highFrequency)
         choice |= 0x01;
