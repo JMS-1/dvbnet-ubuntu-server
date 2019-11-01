@@ -11,8 +11,8 @@ Frontend::Frontend(int tcp, FrontendManager *manager)
       _filter(nullptr),
       _manager(manager),
       _tcp(tcp),
-      adapter(adapter),
-      frontend(frontend)
+      adapter(0),
+      frontend(0)
 {
     // Zwischenspeicher konfigurieren.
     auto buffer = 10 * 1024 * 1024;

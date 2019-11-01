@@ -106,8 +106,12 @@ void Filter::feeder()
             ::memcpy(buffer, source, prev);
 
         // An den Client durchreichen.
-        if (dest > payload)
-            _frontend.sendResponse(payload, dest - payload);
+        auto send = dest - payload;
+
+        total += send;
+
+        if (send > 0)
+            _frontend.sendResponse(payload, send);
     }
 
     // Übergabebereich kann nun wieder freigegeben werden.

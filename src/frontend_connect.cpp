@@ -1,5 +1,6 @@
 #include "frontend.hpp"
 
+#include "filter.hpp"
 #include "manager.hpp"
 
 #include <fcntl.h>
@@ -55,6 +56,19 @@ bool Frontend::processConnect()
         ::printf("can't set LNB voltage: %d (%d)\n", voltage_err, errno);
     }
 #endif
+
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("%d/%d connected\n", adapter, frontend);
+#endif
+
+    if (!_filter)
+    {
+        _filter = new Filter(*this);
+
+        if (!_filter->open())
+            return false;
+    }
 
     return true;
 }

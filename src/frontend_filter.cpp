@@ -19,17 +19,14 @@ bool Frontend::processAddFilter()
         return false;
     }
 
-    // Filter einmalig anlegen.
-    if (!_filter)
-    {
-        _filter = new Filter(*this);
-
-        if (!_filter->open())
-            return false;
-    }
-
     // Aktivieren.
-    _filter->setFilter(pid, true);
+    if (_filter)
+        _filter->setFilter(pid, true);
+
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("+filter %d\n", pid);
+#endif
 
     return true;
 }

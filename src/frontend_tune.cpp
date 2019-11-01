@@ -19,9 +19,6 @@ bool Frontend::processTune()
     if (_fd < 0)
         return false;
 
-    // Datenempfang des aktuellen Transponders deaktivieren.
-    stopFilter();
-
     // DiSEqC Steuerung durchführen.
     auto useSwitch = (transponder.lnbMode >= diseqc_modes::diseqc1) && (transponder.lnbMode <= diseqc_modes::diseqc4);
     auto hiFreq = useSwitch && transponder.frequency >= transponder.lnbSwitch;
@@ -58,6 +55,11 @@ bool Frontend::processTune()
 
     // Eine kleine Pause um sicherzustellen, dass der Vorgang auch abgeschlossen wurde.
     ::sleep(2);
+
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("%d/%d tuned\n", adapter, frontend);
+#endif
 
     return true;
 }

@@ -15,5 +15,10 @@ bool Frontend::processRemoveAllFilters()
     if (_filter)
         _filter->clearFilter();
 
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("-all filters\n");
+#endif
+
     return true;
 }

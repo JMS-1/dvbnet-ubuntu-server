@@ -23,5 +23,10 @@ bool Frontend::processRemoveFilter()
     if (_filter)
         _filter->setFilter(pid, false);
 
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("-filter %d\n", pid);
+#endif
+
     return true;
 }
