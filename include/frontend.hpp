@@ -52,8 +52,6 @@ private:
     Filter *_filter;
     // Entgegennahme von Steuerbefehlen des Clients.
     std::thread *_listener;
-    // Synchronisation der Kommunikation.
-    std::mutex _client;
 
 private:
     // Liest Steuerdaten des Clients ein.

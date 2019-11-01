@@ -187,7 +187,5 @@ void Frontend::removeAllFilters()
 // Sendet Daten an den Client.
 void Frontend::sendResponse(const void *data, int bytes)
 {
-    Locker _self(_client);
-
     ::send(_tcp, data, bytes, MSG_NOSIGNAL | MSG_DONTWAIT);
 }
