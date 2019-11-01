@@ -175,7 +175,13 @@ bool Filter::open()
         return false;
 
     // Vergrößerten Zwischenspeicher anlegen.
-    ::ioctl(_fd, DMX_SET_BUFFER_SIZE, 10 * 1024 * 1024);
+    auto buf_err = ::ioctl(_fd, DMX_SET_BUFFER_SIZE, 10 * 1024 * 1024);
+
+#ifdef DEBUG
+    // Protokollierung.
+    if (buf_err != 0)
+        ::printf("can't set buffer: %d\n", errno);
+#endif
 
     // Datenstrom beim Demultiplexer anmelden.
     dmx_pes_filter_params filter = {

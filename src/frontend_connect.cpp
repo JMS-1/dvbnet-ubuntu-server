@@ -62,13 +62,5 @@ bool Frontend::processConnect()
     ::printf("%d/%d connected\n", adapter, frontend);
 #endif
 
-    if (!_filter)
-    {
-        _filter = new Filter(*this);
-
-        if (!_filter->open())
-            return false;
-    }
-
-    return true;
+       return true;
 }

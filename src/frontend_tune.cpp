@@ -1,5 +1,7 @@
 #include "frontend.hpp"
 
+#include "filter.hpp"
+
 #include <sys/ioctl.h>
 
 // Frontend auf einen neuen Transponder ausrichten.
@@ -18,6 +20,9 @@ bool Frontend::processTune()
     // Verwaltung ist noch nicht mit einem Frontend verbunden.
     if (_fd < 0)
         return false;
+
+    // Aktiven Filter deaktivieren.
+    stopFilter();
 
     // DiSEqC Steuerung durchführen.
     auto useSwitch = (transponder.lnbMode >= diseqc_modes::diseqc1) && (transponder.lnbMode <= diseqc_modes::diseqc4);
@@ -55,6 +60,12 @@ bool Frontend::processTune()
 
     // Eine kleine Pause um sicherzustellen, dass der Vorgang auch abgeschlossen wurde.
     ::sleep(2);
+
+    // Filter jetzt erzeugen.
+    _filter = new Filter(*this);
+
+    if (!_filter->open())
+        return false;
 
 #ifdef DEBUG
     // Protokollierung.
