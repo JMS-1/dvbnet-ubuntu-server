@@ -25,14 +25,21 @@ class DiSEqCMessage
 {
 public:
     // Erzeugt eine Burst-Mode Steuermeldung.
-    DiSEqCMessage(bool burst) : message(nullptr), burst(burst), repeat(1) {}
-    // Erzeugt eine Standardsteuermeldung.
-    DiSEqCMessage(__u8 message[], __u8 repeat) : message(message), burst(false), repeat(repeat) {}
+    DiSEqCMessage(bool burst) : burst(burst), repeat(0) {}
 
-public:
+    // Erzeugt eine Standardsteuermeldung.
+    DiSEqCMessage(__u8 repeat, __u8 cmd0, __u8 cmd1, __u8 cmd2, __u8 cmd3 = 0) : burst(false), repeat(repeat)
+    {
+        _message[0] = cmd0;
+        _message[1] = cmd1;
+        _message[2] = cmd2;
+        _message[3] = cmd3;
+    }
+
+private:
     // Nachricht - falls nicht der Burst-Mode verwendet wird.
-    const __u8 *message;
-    // Burst-Mode - nur berücksichtigt wenn die Nachricht nicht gesetzt ist.
+    __u8 _message[4];
+    // Burst-Mode - nur berücksichtigt wenn die Anzahl der Wiederholungen 0 ist.
     const bool burst;
     // Die Anzahl der Wiederholungen - zurzeit nicht verwendet.
     const __u8 repeat;

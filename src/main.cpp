@@ -1,5 +1,5 @@
 //#define DUMP_STRUCT_LAYOUT
-//#define RUN_TEST
+#define RUN_TEST
 
 #include <fcntl.h>
 #include <netdb.h>
@@ -190,7 +190,7 @@ int main()
 
     char buffer[100000];
 
-    for (int end = ::time(nullptr) + 60; ::time(nullptr) < end;)
+    for (int end = ::time(nullptr) + 10; ::time(nullptr) < end;)
     {
         auto bytes = readBuffer(fd, buffer, sizeof(buffer));
 
