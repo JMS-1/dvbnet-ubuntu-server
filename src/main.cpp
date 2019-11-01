@@ -1,5 +1,5 @@
 //#define DUMP_STRUCT_LAYOUT
-#define RUN_TEST
+//#define RUN_TEST
 
 #include <fcntl.h>
 #include <netdb.h>
@@ -180,10 +180,13 @@ int main()
     ::write(fd, &zdfhd, sizeof(SatelliteTune));
 
     auto addsect = frontend_request::add_filter;
-    __u16 pid = 6110;
+    __u16 pids[] = {18, 6110};
 
-    ::write(fd, &addsect, sizeof(addsect));
-    ::write(fd, &pid, sizeof(pid));
+    for (auto pid : pids)
+    {
+        ::write(fd, &addsect, sizeof(addsect));
+        ::write(fd, &pid, sizeof(pid));
+    }
 
     auto wr = ::open("dump.bin", O_CREAT | O_TRUNC | O_WRONLY, 0x777);
     size_t total = 0;

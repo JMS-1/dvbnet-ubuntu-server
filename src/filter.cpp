@@ -85,9 +85,9 @@ void Filter::feeder()
                 // PID ermitteln.
                 auto pidHigh = static_cast<__u16>(source[1]);
                 auto pidLow = static_cast<__u16>(source[2]);
-                auto pid = (pidHigh << 8) + pidLow;
+                auto pid = ((pidHigh << 8) + pidLow) % sizeof(_filters);
 
-                if (_filters[pid % sizeof(_filters)])
+                if (_filters[pid])
                 {
                     // TS Paket übernehmen.
                     ::memcpy(dest, source, TSPACKETSIZE);

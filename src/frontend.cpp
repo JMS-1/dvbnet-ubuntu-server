@@ -1,10 +1,5 @@
 #include "frontend.hpp"
 
-#include <fcntl.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
-
 #include "filter.hpp"
 #include "manager.hpp"
 #include "threadTools.hpp"
@@ -41,9 +36,7 @@ Frontend::~Frontend()
     auto manager = _manager;
 
     if (!manager)
-    {
         return;
-    }
 
     _manager = nullptr;
 
@@ -61,9 +54,7 @@ bool Frontend::readblock(void *buffer, int len)
 
         // Verbindung wurde beendet.
         if (read <= 0)
-        {
             return false;
-        }
 
         // Speicher nachführen.
         cbuffer += read;
@@ -89,9 +80,7 @@ void Frontend::waitRequest()
         frontend_request request;
 
         if (!readblock(&request, sizeof(request)))
-        {
             break;
-        }
 
         // Steuerbefehl ausführen.
         auto ok = false;
@@ -116,16 +105,12 @@ void Frontend::waitRequest()
         }
 
         if (!ok)
-        {
             break;
-        }
     }
 
     // Verbindung schliessen.
     if (_active)
-    {
         close(true);
-    }
 
 #ifdef DEBUG
     // Protokollierung.
@@ -146,8 +131,7 @@ void Frontend::close(bool nowait)
     {
         _fd = -1;
 
-        // Alle angemeldeten Filter beenden.
-        removeAllFilters();
+        stopFilter();
 
         ::close(fd);
     }
@@ -171,21 +155,14 @@ void Frontend::close(bool nowait)
 #endif
 }
 
-// Gesamten Datenempfang beenden.
-void Frontend::removeAllFilters()
+void Frontend::stopFilter()
 {
     auto filter = _filter;
 
-    if (filter)
-    {
-        _filter = nullptr;
+    if (!filter)
+        return;
 
-        delete filter;
-    }
-}
+    _filter = nullptr;
 
-// Sendet Daten an den Client.
-void Frontend::sendResponse(const void *data, int bytes) const
-{
-    ::send(_tcp, data, bytes, MSG_NOSIGNAL | MSG_DONTWAIT);
+    delete filter;
 }

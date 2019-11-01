@@ -9,24 +9,18 @@ bool Frontend::processTune()
     SatelliteTune transponder;
 
     if (!readblock(&transponder, sizeof(transponder)))
-    {
         return false;
-    }
 
     // Verwaltung ist bereits beendet.
     if (!_active)
-    {
         return false;
-    }
 
     // Verwaltung ist noch nicht mit einem Frontend verbunden.
     if (_fd < 0)
-    {
         return false;
-    }
 
     // Datenempfang des aktuellen Transponders deaktivieren.
-    removeAllFilters();
+    stopFilter();
 
     // DiSEqC Steuerung durchführen.
     auto useSwitch = (transponder.lnbMode >= diseqc_modes::diseqc1) && (transponder.lnbMode <= diseqc_modes::diseqc4);
@@ -59,9 +53,7 @@ bool Frontend::processTune()
 #ifdef DEBUG
     // Protokollierung.
     if (tune_err != 0)
-    {
         ::printf("can't tune: %d (%d)\n", tune_err, errno);
-    }
 #endif
 
     // Eine kleine Pause um sicherzustellen, dass der Vorgang auch abgeschlossen wurde.

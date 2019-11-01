@@ -10,6 +10,17 @@
 
 #include "frontend.hpp"
 
+// Hilfsklasse zum Sperren innerhalb eines Blocks.
+class Locker
+{
+public:
+    Locker(std::mutex &lock) : _lock(lock) { _lock.lock(); }
+    ~Locker() { _lock.unlock(); }
+
+private:
+    std::mutex &_lock;
+};
+
 // Verwaltet Clientverbedingungen und damit auch die zugehörige Hardware.
 class FrontendManager
 {

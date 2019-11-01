@@ -2,9 +2,9 @@
 #define _DVBNET_FRONTEND_H 1
 
 #include <unistd.h>
+#include <netinet/in.h>
 
 #include <map>
-#include <mutex>
 #include <thread>
 
 #include "messages.hpp"
@@ -12,28 +12,24 @@
 class Filter;
 class FrontendManager;
 
-// Hilfsklasse zum Sperren innerhalb eines Blocks.
-class Locker
-{
-public:
-    Locker(std::mutex &lock) : _lock(lock) { _lock.lock(); }
-    ~Locker() { _lock.unlock(); }
-
-private:
-    std::mutex &_lock;
-};
-
 // Verwaltet ein einzelnes Frontend.
 class Frontend
 {
-    friend class Filter;
-    friend class FrontendManager;
-
 public:
     // Legt ein Frontend zu einem Steuerdatenstrom an.
     Frontend(int tcp, FrontendManager *_manager);
     // Beendet das Frontend.
     ~Frontend();
+
+public:
+    // Zu verwendender DVB Adapter.
+    int adapter;
+    // Zu verwendendes Frontend des DVB Adapters.
+    int frontend;
+
+public:
+    // Sendet Nutzdaten an den Client.
+    void sendResponse(const void *data, int bytes) const { ::send(_tcp, data, bytes, MSG_NOSIGNAL | MSG_DONTWAIT); }
 
 private:
     // Gesetzt während die Verwaltung verwendet werden darf.
@@ -44,10 +40,6 @@ private:
     volatile int _fd;
     // Steuerkanal zum Client.
     volatile int _tcp;
-    // Zu verwendender DVB Adapter.
-    int adapter;
-    // Zu verwendendes Frontend des DVB Adapters.
-    int frontend;
     // Alle angemeldeten Datenströme.
     Filter *_filter;
     // Entgegennahme von Steuerbefehlen des Clients.
@@ -70,10 +62,8 @@ private:
     bool processRemoveAllFilters();
     // Beendet diese Verwaltung.
     void close(bool nowait);
-    // Beendet den Empfang alles Datenströme.
-    void removeAllFilters();
-    // Sendet Nutzdaten an den Client.
-    void sendResponse(const void *data, int bytes) const;
+    // Benden die Entgegennahme der Daten.
+    void stopFilter();
 };
 
 #endif
