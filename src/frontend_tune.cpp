@@ -3,6 +3,7 @@
 #include "filter.hpp"
 
 #include <sys/ioctl.h>
+#include <stdio.h>
 
 // Frontend auf einen neuen Transponder ausrichten.
 bool Frontend::processTune()
@@ -40,9 +41,9 @@ bool Frontend::processTune()
         {
             {DTV_DELIVERY_SYSTEM, {0}, transponder.s2 ? fe_delivery_system::SYS_DVBS2 : fe_delivery_system::SYS_DVBS},
             {DTV_FREQUENCY, {0}, freq},
-            {DTV_INNER_FEC, {0}, transponder.innerFEC},
             {DTV_MODULATION, {0}, transponder.modulation},
             {DTV_SYMBOL_RATE, {0}, transponder.symbolrate},
+            {DTV_INNER_FEC, {0}, transponder.innerFEC},
             {DTV_ROLLOFF, {0}, transponder.rolloff},
             {DTV_TUNE, {0}, 0}};
 
@@ -62,6 +63,7 @@ bool Frontend::processTune()
     ::sleep(2);
 
     // Filter jetzt erzeugen.
+
     _filter = new Filter(*this);
 
     if (!_filter->open())

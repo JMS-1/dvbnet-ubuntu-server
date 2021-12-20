@@ -62,5 +62,5 @@ bool Frontend::processConnect()
     ::printf("%d/%d connected\n", adapter, frontend);
 #endif
 
-       return true;
+    return true;
 }

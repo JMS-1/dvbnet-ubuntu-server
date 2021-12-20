@@ -2,6 +2,8 @@
 
 #include "filter.hpp"
 
+#include <stdio.h>
+
 // Aktiviert den Empfang von Kontrolldaten.
 bool Frontend::processAddFilter()
 {

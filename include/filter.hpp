@@ -5,6 +5,7 @@
 
 #include <string.h>
 #include <linux/types.h>
+#include <sys/types.h>
 
 class Frontend;
 

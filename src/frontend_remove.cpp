@@ -2,6 +2,8 @@
 
 #include "filter.hpp"
 
+#include <stdio.h>
+
 // Beendet die Entgegennahme eines einzelnen Datenstroms.
 bool Frontend::processRemoveFilter()
 {

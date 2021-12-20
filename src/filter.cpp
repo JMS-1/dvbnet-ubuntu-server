@@ -4,6 +4,7 @@
 #include <string.h>
 #include <linux/dvb/dmx.h>
 #include <sys/ioctl.h>
+#include <malloc.h>
 
 #include "frontend.hpp"
 #include "threadTools.hpp"
@@ -40,6 +41,9 @@ void Filter::feeder()
     {
         // Daten aus dem Demultiplexer auslesen.
         auto bytes = read(_fd, buffer + prev, BUFFERSIZE);
+
+        // Protokollausgabe.
+        ::printf("+feeder: %ld\n", bytes);
 
         // Sobald keine Daten mehr ankommen wird das Auslesen beendet.
         if (bytes < 0)

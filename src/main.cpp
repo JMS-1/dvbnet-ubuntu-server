@@ -1,5 +1,5 @@
 //#define DUMP_STRUCT_LAYOUT
-//#define RUN_TEST
+#define RUN_TEST
 
 #include <fcntl.h>
 #include <netdb.h>
@@ -81,7 +81,7 @@ int main()
     ::printf("listener started\n");
 
 #ifdef RUN_TEST
-    auto server = ::gethostbyname("localhost");
+    auto server = ::gethostbyname("cardserver");
 
     sockaddr_in addr = {.sin_family = AF_INET, .sin_port = ::htons(29713), {0}};
 
@@ -174,13 +174,28 @@ int main()
         .rolloff = fe_rolloff::ROLLOFF_AUTO,
     };
 
+    SatelliteTune radioNew = {
+        .lnbMode = diseqc_modes::diseqc1,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
+        .modulation = fe_modulation::PSK_8,
+        .frequency = 10891250,
+        .symbolrate = 22000000,
+        .horizontal = true,
+        .innerFEC = fe_code_rate::FEC_2_3,
+        .s2 = true,
+        .rolloff = fe_rolloff::ROLLOFF_35,
+    };
+
     auto tr = frontend_request::tune;
 
     ::write(fd, &tr, sizeof(tr));
-    ::write(fd, &zdfhd, sizeof(SatelliteTune));
+    ::write(fd, &radioNew, sizeof(SatelliteTune));
 
     auto addsect = frontend_request::add_filter;
-    __u16 pids[] = {18, 6110};
+    __u16 pids[] = {0, 700, 701};
 
     for (auto pid : pids)
     {
@@ -193,7 +208,7 @@ int main()
 
     char buffer[100000];
 
-    for (int end = ::time(nullptr) + 10; ::time(nullptr) < end;)
+    for (int end = ::time(nullptr) + 20; ::time(nullptr) < end;)
     {
         auto bytes = readBuffer(fd, buffer, sizeof(buffer));
 
