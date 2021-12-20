@@ -1,231 +1,143 @@
-//#define DUMP_STRUCT_LAYOUT
-#define RUN_TEST
-
-#include <fcntl.h>
-#include <netdb.h>
-#include <string.h>
-#include <unistd.h>
-
-#include "manager.hpp"
-
-int readBuffer(int fd, void *buf, int len)
+extern "C"
 {
-    auto dest = static_cast<char *>(buf);
+#include <libdvbv5/dvb-dev.h>
+}
 
-    for (auto rest = len; rest > 0;)
+#include <stdio.h>
+
+#define _(str) const_cast<char *>(str)
+
+static int print_frontend_stats(
+    struct dvb_v5_fe_parms *parms)
+{
+    char buf[512], *p;
+    int rc, i, len, show, n_status_lines = 0;
+
+    rc = dvb_fe_get_stats(parms);
+    if (rc)
     {
-        auto bytes = ::read(fd, dest, rest);
-
-        if (bytes <= 0)
-            return len - rest;
-
-        dest += bytes;
-        rest -= bytes;
+        return -1;
     }
 
-    return len;
+    p = buf;
+    len = sizeof(buf);
+    dvb_fe_snprintf_stat(parms, DTV_STATUS, NULL, 0, &p, &len, &show);
+
+    for (i = 0; i < MAX_DTV_STATS; i++)
+    {
+        show = 1;
+
+        dvb_fe_snprintf_stat(parms, DTV_QUALITY, _("Quality"),
+                             i, &p, &len, &show);
+
+        dvb_fe_snprintf_stat(parms, DTV_STAT_SIGNAL_STRENGTH, _("Signal"),
+                             i, &p, &len, &show);
+
+        dvb_fe_snprintf_stat(parms, DTV_STAT_CNR, _("C/N"),
+                             i, &p, &len, &show);
+
+        dvb_fe_snprintf_stat(parms, DTV_STAT_ERROR_BLOCK_COUNT, _("UCB"),
+                             i, &p, &len, &show);
+
+        dvb_fe_snprintf_stat(parms, DTV_BER, _("postBER"),
+                             i, &p, &len, &show);
+
+        dvb_fe_snprintf_stat(parms, DTV_PRE_BER, _("preBER"),
+                             i, &p, &len, &show);
+
+        dvb_fe_snprintf_stat(parms, DTV_PER, _("PER"),
+                             i, &p, &len, &show);
+        if (p != buf)
+        {
+            enum dvb_quality qual;
+            int color;
+
+            qual = dvb_fe_retrieve_quality(parms, 0);
+
+            switch (qual)
+            {
+            case DVB_QUAL_POOR:
+                color = 31;
+                break;
+            case DVB_QUAL_OK:
+                color = 36;
+                break;
+            case DVB_QUAL_GOOD:
+                color = 32;
+                break;
+            case DVB_QUAL_UNKNOWN:
+            default:
+                color = 0;
+                break;
+            }
+            printf("\033[%dm", color);
+
+            if (n_status_lines)
+                printf("\t%s\n", buf);
+            else
+                printf("%s\n", buf);
+
+            n_status_lines++;
+
+            p = buf;
+            len = sizeof(buf);
+        }
+    }
+
+    return 0;
 }
 
 int main()
 {
-#ifdef DUMP_STRUCT_LAYOUT
-    ::printf(
-        "SatelliteTune\nlnbMode=%d\nlnb1=%d\nlnb2=%d\nlnbSwitch=%d\nlnbPower=%d\nmodulation=%d\nfrequency=%d\nsymbolrate=%d\nhorizontal=%d\ns2=%d\nrolloff=%d\ntotal=%d\n\n",
-        offsetof(SatelliteTune, lnbMode),
-        offsetof(SatelliteTune, lnb1),
-        offsetof(SatelliteTune, lnb2),
-        offsetof(SatelliteTune, lnbSwitch),
-        offsetof(SatelliteTune, lnbPower),
-        offsetof(SatelliteTune, modulation),
-        offsetof(SatelliteTune, frequency),
-        offsetof(SatelliteTune, symbolrate),
-        offsetof(SatelliteTune, horizontal),
-        offsetof(SatelliteTune, s2),
-        offsetof(SatelliteTune, rolloff),
-        sizeof(SatelliteTune));
+    auto dvb = dvb_dev_alloc();
 
-    ::printf(
-        "connect_request\nadapter=%d\nfrontend=%d\ntotal=%d\n\n",
-        offsetof(connect_request, adapter),
-        offsetof(connect_request, frontend),
-        sizeof(connect_request));
-
-    ::printf(
-        "signal_response\nstatus=%d\nsnr=%d\nstrength=%d\nber=%d\ntotal=%d\n\n",
-        offsetof(signal_response, status),
-        offsetof(signal_response, snr),
-        offsetof(signal_response, strength),
-        offsetof(signal_response, ber),
-        sizeof(signal_response));
-
-    ::printf(
-        "response\ntype=%d\npid=%d\nlen=%d\ntotal=%d\n\n",
-        offsetof(response, type),
-        offsetof(response, pid),
-        offsetof(response, len),
-        sizeof(response));
-
-    auto test = 0x01020304;
-    auto test_ptr = reinterpret_cast<char *>(&test);
-
-    ::printf("%d %d %d %d\n", test_ptr[0], test_ptr[1], test_ptr[2], test_ptr[3]);
-#endif
-
-    FrontendManager manager;
-
-    if (!manager.listen())
+    if (!dvb)
     {
-        ::exit(1);
+        return 1;
     }
 
-    ::printf("listener started\n");
+    auto find = dvb_dev_find(dvb, NULL, NULL);
 
-#ifdef RUN_TEST
-    auto server = ::gethostbyname("cardserver");
-
-    sockaddr_in addr = {.sin_family = AF_INET, .sin_port = ::htons(29713), {0}};
-
-    ::memcpy(&addr.sin_addr.s_addr, server->h_addr, server->h_length);
-
-    auto fd = socket(AF_INET, SOCK_STREAM, 0);
-    auto err = ::connect(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
-
-    if (err != 0)
+    if (find)
     {
-        printf("connect: %d %d\n", err, errno);
+        printf("ERROR %d\n", errno);
+    }
+    else
+    {
+        for (auto adapter = 0; adapter >= 0; adapter++)
+        {
+            for (auto frontend = 0;; frontend++)
+            {
+                auto dev = dvb_dev_seek_by_adapter(dvb, adapter, frontend, DVB_DEVICE_FRONTEND);
+
+                if (!dev)
+                {
+                    if (!frontend)
+                    {
+                        adapter = -2;
+                    }
+
+                    break;
+                }
+
+                printf("(%d, %d)\n", adapter, frontend);
+            }
+        }
+
+        auto dev = dvb_dev_seek_by_adapter(dvb, 0, 0, DVB_DEVICE_FRONTEND);
+
+        if (dev)
+        {
+            auto open = dvb_dev_open(dvb, dev->sysname, O_RDWR);
+
+            if (open)
+            {
+                //print_frontend_stats(dvb->fe_parms);
+
+                dvb_dev_close(open);
+            }
+        }
     }
 
-    auto cr = frontend_request::connect_adapter;
-
-    ::write(fd, &cr, sizeof(cr));
-
-    SatelliteTune rtlplus = {
-        .lnbMode = diseqc_modes::diseqc1,
-        .lnb1 = 9750000,
-        .lnb2 = 10600000,
-        .lnbSwitch = 11700000,
-        .lnbPower = true,
-        .modulation = fe_modulation::QPSK,
-        .frequency = 12187500,
-        .symbolrate = 27500000,
-        .horizontal = true,
-        .innerFEC = fe_code_rate::FEC_3_4,
-        .s2 = false,
-        .rolloff = fe_rolloff::ROLLOFF_AUTO,
-    };
-
-    SatelliteTune zdfhd = {
-        .lnbMode = diseqc_modes::diseqc1,
-        .lnb1 = 9750000,
-        .lnb2 = 10600000,
-        .lnbSwitch = 11700000,
-        .lnbPower = true,
-        .modulation = fe_modulation::PSK_8,
-        .frequency = 11361750,
-        .symbolrate = 22000000,
-        .horizontal = true,
-        .innerFEC = fe_code_rate::FEC_2_3,
-        .s2 = true,
-        .rolloff = fe_rolloff::ROLLOFF_35,
-    };
-
-    SatelliteTune arte = {
-        .lnbMode = diseqc_modes::diseqc1,
-        .lnb1 = 9750000,
-        .lnb2 = 10600000,
-        .lnbSwitch = 11700000,
-        .lnbPower = true,
-        .modulation = fe_modulation::QPSK,
-        .frequency = 10743750,
-        .symbolrate = 22000000,
-        .horizontal = true,
-        .innerFEC = fe_code_rate::FEC_5_6,
-        .s2 = false,
-        .rolloff = fe_rolloff::ROLLOFF_AUTO,
-    };
-
-    SatelliteTune e4p1 = {
-        .lnbMode = diseqc_modes::diseqc2,
-        .lnb1 = 9750000,
-        .lnb2 = 10600000,
-        .lnbSwitch = 11700000,
-        .lnbPower = true,
-        .modulation = fe_modulation::QPSK,
-        .frequency = 10936500,
-        .symbolrate = 22000000,
-        .horizontal = false,
-        .innerFEC = fe_code_rate::FEC_5_6,
-        .s2 = false,
-        .rolloff = fe_rolloff::ROLLOFF_AUTO,
-    };
-
-    SatelliteTune radio = {
-        .lnbMode = diseqc_modes::diseqc1,
-        .lnb1 = 9750000,
-        .lnb2 = 10600000,
-        .lnbSwitch = 11700000,
-        .lnbPower = true,
-        .modulation = fe_modulation::QPSK,
-        .frequency = 12265500,
-        .symbolrate = 27500000,
-        .horizontal = true,
-        .innerFEC = fe_code_rate::FEC_3_4,
-        .s2 = false,
-        .rolloff = fe_rolloff::ROLLOFF_AUTO,
-    };
-
-    SatelliteTune radioNew = {
-        .lnbMode = diseqc_modes::diseqc1,
-        .lnb1 = 9750000,
-        .lnb2 = 10600000,
-        .lnbSwitch = 11700000,
-        .lnbPower = true,
-        .modulation = fe_modulation::PSK_8,
-        .frequency = 10891250,
-        .symbolrate = 22000000,
-        .horizontal = true,
-        .innerFEC = fe_code_rate::FEC_2_3,
-        .s2 = true,
-        .rolloff = fe_rolloff::ROLLOFF_35,
-    };
-
-    auto tr = frontend_request::tune;
-
-    ::write(fd, &tr, sizeof(tr));
-    ::write(fd, &radioNew, sizeof(SatelliteTune));
-
-    auto addsect = frontend_request::add_filter;
-    __u16 pids[] = {0, 700, 701};
-
-    for (auto pid : pids)
-    {
-        ::write(fd, &addsect, sizeof(addsect));
-        ::write(fd, &pid, sizeof(pid));
-    }
-
-    auto wr = ::open("dump.bin", O_CREAT | O_TRUNC | O_WRONLY, 0x777);
-    size_t total = 0;
-
-    char buffer[100000];
-
-    for (int end = ::time(nullptr) + 20; ::time(nullptr) < end;)
-    {
-        auto bytes = readBuffer(fd, buffer, sizeof(buffer));
-
-        if (bytes <= 0)
-            break;
-
-        ::write(wr, buffer, bytes);
-
-        total += bytes;
-    }
-
-    ::close(wr);
-
-    printf("done %ld\n", total);
-
-    ::close(fd);
-#endif
-
-    manager.run();
+    dvb_dev_free(dvb);
 }
