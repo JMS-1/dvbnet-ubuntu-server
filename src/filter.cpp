@@ -2,12 +2,16 @@
 
 #include <fcntl.h>
 #include <string.h>
-#include <linux/dvb/dmx.h>
 #include <sys/ioctl.h>
 #include <malloc.h>
 
 #include "frontend.hpp"
 #include "threadTools.hpp"
+
+extern "C"
+{
+#include <libdvbv5/dvb-demux.h>
+}
 
 #define TSPACKETSIZE 188
 #define TSMAGICBYTE 0x47
@@ -40,15 +44,12 @@ void Filter::feeder()
     for (;;)
     {
         // Daten aus dem Demultiplexer auslesen.
-        auto bytes = read(_fd, buffer + prev, BUFFERSIZE);
-
-        // Protokollausgabe.
-        ::printf("+feeder: %ld\n", bytes);
+        auto bytes = read(_demux, buffer + prev, BUFFERSIZE);
 
         // Sobald keine Daten mehr ankommen wird das Auslesen beendet.
         if (bytes < 0)
         {
-            // Es sei denn wir sind einfach nur zu langsam.
+            // Es sei denn es wir sind einfach nur zu langsam.
             if (errno != EOVERFLOW)
                 break;
 
@@ -133,12 +134,12 @@ void Filter::feeder()
 void Filter::stop()
 {
     // Dateizugriff beenden.
-    const auto fd = _fd;
+    const auto fd = _demux;
 
     if (fd < 0)
         return;
 
-    _fd = -1;
+    _demux = -1;
 
 #ifdef DEBUG
     // Protokollausgabe.
@@ -149,7 +150,7 @@ void Filter::stop()
     clearFilter();
 
     // Verbindung zum Gerät beenden.
-    ::close(fd);
+    dvb_dmx_close(fd);
 
     // Entgegennahme der Daten beenden.
     ThreadTools::join(_thread);
@@ -169,33 +170,16 @@ bool Filter::open()
     stop();
 
     // Dateihanlde anlegen.
-    char path[40];
+    _demux = dvb_dmx_open(_frontend.adapter, _frontend.frontend);
 
-    ::sprintf(path, "/dev/dvb/adapter%i/demux%i", _frontend.adapter, _frontend.frontend);
-
-    _fd = ::open(path, O_RDWR);
-
-    if (_fd < 0)
+    if (_demux < 0)
         return false;
 
-    // Vergrößerten Zwischenspeicher anlegen.
-    auto buf_err = ::ioctl(_fd, DMX_SET_BUFFER_SIZE, 10 * 1024 * 1024);
-
-#ifdef DEBUG
-    // Protokollierung.
-    if (buf_err != 0)
-        ::printf("can't set buffer: %d\n", errno);
-#endif
+    // Wir wollen aber einen blockierende Zugriff damit wir keine Rechenzeit durch EAGAIN verschwenden.
+    fcntl(_demux, F_SETFL, fcntl(_demux, F_GETFL) & ~O_NONBLOCK);
 
     // Datenstrom beim Demultiplexer anmelden.
-    dmx_pes_filter_params filter = {
-        .pid = 0x2000,
-        .input = dmx_input::DMX_IN_FRONTEND,
-        .output = dmx_output::DMX_OUT_TAP,
-        .pes_type = dmx_ts_pes::DMX_PES_OTHER,
-        .flags = DMX_IMMEDIATE_START};
-
-    if (::ioctl(_fd, DMX_SET_PES_FILTER, &filter) != 0)
+    if (dvb_set_pesfilter(_demux, 0x2000, DMX_PES_OTHER, DMX_OUT_TAP, 10 * 1024 * 1024) != 0)
     {
         // Entgegennahme der Daten nicht möglich.
         stop();

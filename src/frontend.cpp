@@ -7,7 +7,7 @@
 // Erstellt eine neue Verwaltung für ein Frontend.
 Frontend::Frontend(int tcp, FrontendManager *manager)
     : _active(true),
-      _fd(-1),
+      _fe(nullptr),
       _filter(nullptr),
       _manager(manager),
       _tcp(tcp),
@@ -125,15 +125,15 @@ void Frontend::waitRequest()
 void Frontend::close(bool nowait)
 {
     // Dateihandle zum Frontend schliessen.
-    auto fd = _fd;
+    auto fe = _fe;
 
-    if (fd >= 0)
+    if (fe)
     {
-        _fd = -1;
+        _fe = nullptr;
 
         stopFilter();
 
-        ::close(fd);
+        dvb_fe_close(const_cast<dvb_v5_fe_parms *>(fe));
     }
 
     // Steuerkanal schliessen.

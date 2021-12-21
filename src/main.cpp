@@ -1,107 +1,209 @@
-extern "C"
-{
-#include <libdvbv5/dvb-fe.h>
-#include <libdvbv5/dvb-demux.h>
-}
+//#define DUMP_STRUCT_LAYOUT
+#define RUN_TEST
 
-#include <stdio.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "manager.hpp"
 
-int main()
+static int readBuffer(int fd, void *buf, int len)
 {
-    auto fe = dvb_fe_open(0, 0, 0, 0);
+    auto dest = static_cast<char *>(buf);
 
-    if (!fe)
+    for (auto rest = len; rest > 0;)
     {
-        return errno;
+        auto bytes = ::read(fd, dest, rest);
+
+        if (bytes <= 0)
+            return len - rest;
+
+        dest += bytes;
+        rest -= bytes;
     }
 
-    SatelliteTune transponder = {
+    return len;
+}
+
+int main()
+{
+#ifdef DUMP_STRUCT_LAYOUT
+    ::printf(
+        "SatelliteTune\nlnbMode=%d\nlnb1=%d\nlnb2=%d\nlnbSwitch=%d\nlnbPower=%d\nmodulation=%d\nfrequency=%d\nsymbolrate=%d\nhorizontal=%d\ns2=%d\nrolloff=%d\ntotal=%d\n\n",
+        offsetof(SatelliteTune, lnbMode),
+        offsetof(SatelliteTune, lnb1),
+        offsetof(SatelliteTune, lnb2),
+        offsetof(SatelliteTune, lnbSwitch),
+        offsetof(SatelliteTune, lnbPower),
+        offsetof(SatelliteTune, modulation),
+        offsetof(SatelliteTune, frequency),
+        offsetof(SatelliteTune, symbolrate),
+        offsetof(SatelliteTune, horizontal),
+        offsetof(SatelliteTune, s2),
+        offsetof(SatelliteTune, rolloff),
+        sizeof(SatelliteTune));
+
+    ::printf(
+        "connect_request\nadapter=%d\nfrontend=%d\ntotal=%d\n\n",
+        offsetof(connect_request, adapter),
+        offsetof(connect_request, frontend),
+        sizeof(connect_request));
+
+    ::printf(
+        "signal_response\nstatus=%d\nsnr=%d\nstrength=%d\nber=%d\ntotal=%d\n\n",
+        offsetof(signal_response, status),
+        offsetof(signal_response, snr),
+        offsetof(signal_response, strength),
+        offsetof(signal_response, ber),
+        sizeof(signal_response));
+
+    ::printf(
+        "response\ntype=%d\npid=%d\nlen=%d\ntotal=%d\n\n",
+        offsetof(response, type),
+        offsetof(response, pid),
+        offsetof(response, len),
+        sizeof(response));
+
+    auto test = 0x01020304;
+    auto test_ptr = reinterpret_cast<char *>(&test);
+
+    ::printf("%d %d %d %d\n", test_ptr[0], test_ptr[1], test_ptr[2], test_ptr[3]);
+#endif
+
+    FrontendManager manager;
+
+    if (!manager.listen())
+    {
+        ::exit(1);
+    }
+
+    ::printf("listener started\n");
+
+#ifdef RUN_TEST
+    auto server = ::gethostbyname("localhost");
+
+    sockaddr_in addr = {.sin_family = AF_INET, .sin_port = ::htons(29713), {0}};
+
+    ::memcpy(&addr.sin_addr.s_addr, server->h_addr, server->h_length);
+
+    auto fd = socket(AF_INET, SOCK_STREAM, 0);
+    auto err = ::connect(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+
+    if (err != 0)
+    {
+        printf("connect: %d %d\n", err, errno);
+    }
+
+    auto cr = frontend_request::connect_adapter;
+
+    ::write(fd, &cr, sizeof(cr));
+
+    SatelliteTune rtlplus = {
         .lnbMode = diseqc_modes::diseqc1,
-        .lnb1 = 9750000,
-        .lnb2 = 10600000,
-        .lnbSwitch = 11700000,
-        .lnbPower = true,
-        .modulation = QPSK,
+        .modulation = fe_modulation::QPSK,
         .frequency = 12187500,
         .symbolrate = 27500000,
         .horizontal = true,
-        .innerFEC = FEC_3_4,
+        .innerFEC = fe_code_rate::FEC_3_4,
         .s2 = false,
-        .rolloff = ROLLOFF_AUTO,
+        .rolloff = fe_rolloff::ROLLOFF_AUTO,
     };
 
-    auto lnbIndex = dvb_sat_search_lnb("EXTENDED");
+    SatelliteTune zdfhd = {
+        .lnbMode = diseqc_modes::diseqc1,
+        .modulation = fe_modulation::PSK_8,
+        .frequency = 11361750,
+        .symbolrate = 22000000,
+        .horizontal = true,
+        .innerFEC = fe_code_rate::FEC_2_3,
+        .s2 = true,
+        .rolloff = fe_rolloff::ROLLOFF_35,
+    };
 
-    if (lnbIndex < 0)
+    SatelliteTune arte = {
+        .lnbMode = diseqc_modes::diseqc1,
+        .modulation = fe_modulation::QPSK,
+        .frequency = 10743750,
+        .symbolrate = 22000000,
+        .horizontal = true,
+        .innerFEC = fe_code_rate::FEC_5_6,
+        .s2 = false,
+        .rolloff = fe_rolloff::ROLLOFF_AUTO,
+    };
+
+    SatelliteTune e4p1 = {
+        .lnbMode = diseqc_modes::diseqc2,
+        .modulation = fe_modulation::QPSK,
+        .frequency = 10936500,
+        .symbolrate = 22000000,
+        .horizontal = false,
+        .innerFEC = fe_code_rate::FEC_5_6,
+        .s2 = false,
+        .rolloff = fe_rolloff::ROLLOFF_AUTO,
+    };
+
+    SatelliteTune radio = {
+        .lnbMode = diseqc_modes::diseqc1,
+        .modulation = fe_modulation::QPSK,
+        .frequency = 12265500,
+        .symbolrate = 27500000,
+        .horizontal = true,
+        .innerFEC = fe_code_rate::FEC_3_4,
+        .s2 = false,
+        .rolloff = fe_rolloff::ROLLOFF_AUTO,
+    };
+
+    SatelliteTune radioNew = {
+        .lnbMode = diseqc_modes::diseqc1,
+        .modulation = fe_modulation::PSK_8,
+        .frequency = 10891250,
+        .symbolrate = 22000000,
+        .horizontal = true,
+        .innerFEC = fe_code_rate::FEC_2_3,
+        .s2 = true,
+        .rolloff = fe_rolloff::ROLLOFF_35,
+    };
+
+    auto tr = frontend_request::tune;
+
+    ::write(fd, &tr, sizeof(tr));
+    ::write(fd, &rtlplus, sizeof(SatelliteTune));
+
+    auto addsect = frontend_request::add_filter;
+    __u16 pids[] = {0, 168, 137};
+
+    for (auto pid : pids)
     {
-        printf("LNB: %d\n", errno);
+        ::write(fd, &addsect, sizeof(addsect));
+        ::write(fd, &pid, sizeof(pid));
     }
-
-    fe->lnb = dvb_sat_get_lnb(lnbIndex);
-
-    dvb_fe_store_parm(fe, DTV_DELIVERY_SYSTEM, transponder.s2 ? fe_delivery_system::SYS_DVBS2 : fe_delivery_system::SYS_DVBS);
-    dvb_fe_store_parm(fe, DTV_FREQUENCY, transponder.frequency);
-    dvb_fe_store_parm(fe, DTV_MODULATION, transponder.modulation);
-    dvb_fe_store_parm(fe, DTV_SYMBOL_RATE, transponder.symbolrate);
-    dvb_fe_store_parm(fe, DTV_INNER_FEC, transponder.innerFEC);
-    dvb_fe_store_parm(fe, DTV_ROLLOFF, transponder.rolloff);
-
-    if (dvb_fe_set_parms(fe))
-    {
-        printf("PARAMS: %d\n", errno);
-    }
-
-    auto data = dvb_dmx_open(0, 0);
-
-    if (!data)
-    {
-        printf("DEMUX: %d\n", errno);
-    }
-
-    if (dvb_set_pesfilter(data, 0x2000, DMX_PES_OTHER, DMX_OUT_TAP, 10 * 1024 * 1024))
-    {
-        printf("FILTER: %d\n", errno);
-    }
-
-    auto buffer = new uint8_t[100000];
-    auto total = 0;
 
     auto wr = ::open("dump.bin", O_CREAT | O_TRUNC | O_WRONLY, 0x777);
+    size_t total = 0;
 
-    for (; total < 100000000;)
+    char buffer[100000];
+
+    for (int end = ::time(nullptr) + 20; ::time(nullptr) < end;)
     {
-        auto bytes = read(data, buffer, 100000);
+        auto bytes = readBuffer(fd, buffer, sizeof(buffer));
 
-        if (!bytes)
-        {
+        if (bytes <= 0)
             break;
-        }
-
-        if (bytes < 0)
-        {
-            if (errno != EAGAIN)
-            {
-                printf("READ: %d\n", errno);
-
-                break;
-            }
-
-            continue;
-        }
 
         ::write(wr, buffer, bytes);
 
         total += bytes;
     }
 
-    delete buffer;
-
     ::close(wr);
 
-    printf("TOTAL: %d\n", total);
+    printf("done %ld\n", total);
 
-    dvb_dmx_close(data);
-    dvb_fe_close(fe);
+    ::close(fd);
+#endif
+
+    manager.run();
+
+    return 0;
 }

@@ -4,8 +4,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <linux/dvb/frontend.h>
 #include <sys/ioctl.h>
+
+extern "C"
+{
+#include <libdvbv5/dvb-fe.h>
+}
 
 /*
     Übermittelt einen DiSEqC Steuerbefehl an ein Frontend.

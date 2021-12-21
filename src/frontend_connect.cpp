@@ -28,14 +28,10 @@ bool Frontend::processConnect()
 
     manager->allocate(adapter, frontend);
 
-    // Dateizugriff erstellen.
-    char path[40];
+    // Zugriff zum Gerät erstellen.
+    _fe = dvb_fe_open(adapter, frontend, 0, 0);
 
-    ::sprintf(path, "/dev/dvb/adapter%i/frontend%i", adapter, frontend);
-
-    _fd = ::open(path, O_RDWR);
-
-    if (_fd < 0)
+    if (!_fe)
     {
         return false;
     }
@@ -47,7 +43,7 @@ bool Frontend::processConnect()
     }
 
     // Spannung setzen.
-    auto voltage_err = ::ioctl(_fd, FE_SET_VOLTAGE, SEC_VOLTAGE_13);
+    auto voltage_err = dvb_fe_sec_voltage(const_cast<dvb_v5_fe_parms *>(_fe), 1, 0);
 
 #ifdef DEBUG
     // Protokollierung.
@@ -61,6 +57,9 @@ bool Frontend::processConnect()
     // Protokollierung.
     ::printf("%d/%d connected\n", adapter, frontend);
 #endif
+
+    // Standard LNB Konfiguration zuweisen.
+    _fe->lnb = dvb_sat_get_lnb(dvb_sat_search_lnb("EXTENDED"));
 
     return true;
 }

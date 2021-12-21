@@ -19,39 +19,25 @@ bool Frontend::processTune()
         return false;
 
     // Verwaltung ist noch nicht mit einem Frontend verbunden.
-    if (_fd < 0)
+    if (!_fe)
         return false;
 
     // Aktiven Filter deaktivieren.
     stopFilter();
 
-    // DiSEqC Steuerung durchführen.
-    auto useSwitch = (transponder.lnbMode >= diseqc_modes::diseqc1) && (transponder.lnbMode <= diseqc_modes::diseqc4);
-    auto hiFreq = useSwitch && transponder.frequency >= transponder.lnbSwitch;
-    auto loFreq = useSwitch && transponder.frequency < transponder.lnbSwitch;
-    auto freq = transponder.frequency - (hiFreq ? transponder.lnb2 : 0) - (loFreq ? transponder.lnb1 : 0);
-
-    DiSEqCMessage diseqc(DiSEqCMessage::create(transponder.lnbMode, hiFreq, transponder.horizontal));
-
     // Umschaltung vornehmen - Fehlerbehandlung explizit deaktiviert.
-    diseqc.send(_fd);
+    //diseqc.send(_fd);
 
     // Transponder anwählen.
-    struct dtv_property props[] =
-        {
-            {DTV_DELIVERY_SYSTEM, {0}, transponder.s2 ? fe_delivery_system::SYS_DVBS2 : fe_delivery_system::SYS_DVBS},
-            {DTV_FREQUENCY, {0}, freq},
-            {DTV_MODULATION, {0}, transponder.modulation},
-            {DTV_SYMBOL_RATE, {0}, transponder.symbolrate},
-            {DTV_INNER_FEC, {0}, transponder.innerFEC},
-            {DTV_ROLLOFF, {0}, transponder.rolloff},
-            {DTV_TUNE, {0}, 0}};
-
-    struct dtv_properties dtv_prop = {
-        .num = sizeof(props) / sizeof(props[0]), .props = props};
+    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_DELIVERY_SYSTEM, transponder.s2 ? fe_delivery_system::SYS_DVBS2 : fe_delivery_system::SYS_DVBS);
+    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_FREQUENCY, transponder.frequency);
+    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_MODULATION, transponder.modulation);
+    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_SYMBOL_RATE, transponder.symbolrate);
+    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_INNER_FEC, transponder.innerFEC);
+    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_ROLLOFF, transponder.rolloff);
 
     // Fehlerbehandlung bewußt deaktiviert.
-    auto tune_err = ::ioctl(_fd, FE_SET_PROPERTY, &dtv_prop);
+    auto tune_err = dvb_fe_set_parms(const_cast<dvb_v5_fe_parms *>(_fe));
 
 #ifdef DEBUG
     // Protokollierung.
@@ -63,7 +49,6 @@ bool Frontend::processTune()
     ::sleep(2);
 
     // Filter jetzt erzeugen.
-
     _filter = new Filter(*this);
 
     if (!_filter->open())
