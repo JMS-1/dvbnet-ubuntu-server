@@ -1,143 +1,107 @@
 extern "C"
 {
-#include <libdvbv5/dvb-dev.h>
+#include <libdvbv5/dvb-fe.h>
+#include <libdvbv5/dvb-demux.h>
 }
 
 #include <stdio.h>
 
-#define _(str) const_cast<char *>(str)
-
-static int print_frontend_stats(
-    struct dvb_v5_fe_parms *parms)
-{
-    char buf[512], *p;
-    int rc, i, len, show, n_status_lines = 0;
-
-    rc = dvb_fe_get_stats(parms);
-    if (rc)
-    {
-        return -1;
-    }
-
-    p = buf;
-    len = sizeof(buf);
-    dvb_fe_snprintf_stat(parms, DTV_STATUS, NULL, 0, &p, &len, &show);
-
-    for (i = 0; i < MAX_DTV_STATS; i++)
-    {
-        show = 1;
-
-        dvb_fe_snprintf_stat(parms, DTV_QUALITY, _("Quality"),
-                             i, &p, &len, &show);
-
-        dvb_fe_snprintf_stat(parms, DTV_STAT_SIGNAL_STRENGTH, _("Signal"),
-                             i, &p, &len, &show);
-
-        dvb_fe_snprintf_stat(parms, DTV_STAT_CNR, _("C/N"),
-                             i, &p, &len, &show);
-
-        dvb_fe_snprintf_stat(parms, DTV_STAT_ERROR_BLOCK_COUNT, _("UCB"),
-                             i, &p, &len, &show);
-
-        dvb_fe_snprintf_stat(parms, DTV_BER, _("postBER"),
-                             i, &p, &len, &show);
-
-        dvb_fe_snprintf_stat(parms, DTV_PRE_BER, _("preBER"),
-                             i, &p, &len, &show);
-
-        dvb_fe_snprintf_stat(parms, DTV_PER, _("PER"),
-                             i, &p, &len, &show);
-        if (p != buf)
-        {
-            enum dvb_quality qual;
-            int color;
-
-            qual = dvb_fe_retrieve_quality(parms, 0);
-
-            switch (qual)
-            {
-            case DVB_QUAL_POOR:
-                color = 31;
-                break;
-            case DVB_QUAL_OK:
-                color = 36;
-                break;
-            case DVB_QUAL_GOOD:
-                color = 32;
-                break;
-            case DVB_QUAL_UNKNOWN:
-            default:
-                color = 0;
-                break;
-            }
-            printf("\033[%dm", color);
-
-            if (n_status_lines)
-                printf("\t%s\n", buf);
-            else
-                printf("%s\n", buf);
-
-            n_status_lines++;
-
-            p = buf;
-            len = sizeof(buf);
-        }
-    }
-
-    return 0;
-}
+#include "manager.hpp"
 
 int main()
 {
-    auto dvb = dvb_dev_alloc();
+    auto fe = dvb_fe_open(0, 0, 0, 0);
 
-    if (!dvb)
+    if (!fe)
     {
-        return 1;
+        return errno;
     }
 
-    auto find = dvb_dev_find(dvb, NULL, NULL);
+    SatelliteTune transponder = {
+        .lnbMode = diseqc_modes::diseqc1,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
+        .modulation = QPSK,
+        .frequency = 12187500,
+        .symbolrate = 27500000,
+        .horizontal = true,
+        .innerFEC = FEC_3_4,
+        .s2 = false,
+        .rolloff = ROLLOFF_AUTO,
+    };
 
-    if (find)
+    auto lnbIndex = dvb_sat_search_lnb("EXTENDED");
+
+    if (lnbIndex < 0)
     {
-        printf("ERROR %d\n", errno);
+        printf("LNB: %d\n", errno);
     }
-    else
+
+    fe->lnb = dvb_sat_get_lnb(lnbIndex);
+
+    dvb_fe_store_parm(fe, DTV_DELIVERY_SYSTEM, transponder.s2 ? fe_delivery_system::SYS_DVBS2 : fe_delivery_system::SYS_DVBS);
+    dvb_fe_store_parm(fe, DTV_FREQUENCY, transponder.frequency);
+    dvb_fe_store_parm(fe, DTV_MODULATION, transponder.modulation);
+    dvb_fe_store_parm(fe, DTV_SYMBOL_RATE, transponder.symbolrate);
+    dvb_fe_store_parm(fe, DTV_INNER_FEC, transponder.innerFEC);
+    dvb_fe_store_parm(fe, DTV_ROLLOFF, transponder.rolloff);
+
+    if (dvb_fe_set_parms(fe))
     {
-        for (auto adapter = 0; adapter >= 0; adapter++)
+        printf("PARAMS: %d\n", errno);
+    }
+
+    auto data = dvb_dmx_open(0, 0);
+
+    if (!data)
+    {
+        printf("DEMUX: %d\n", errno);
+    }
+
+    if (dvb_set_pesfilter(data, 0x2000, DMX_PES_OTHER, DMX_OUT_TAP, 10 * 1024 * 1024))
+    {
+        printf("FILTER: %d\n", errno);
+    }
+
+    auto buffer = new uint8_t[100000];
+    auto total = 0;
+
+    auto wr = ::open("dump.bin", O_CREAT | O_TRUNC | O_WRONLY, 0x777);
+
+    for (; total < 100000000;)
+    {
+        auto bytes = read(data, buffer, 100000);
+
+        if (!bytes)
         {
-            for (auto frontend = 0;; frontend++)
-            {
-                auto dev = dvb_dev_seek_by_adapter(dvb, adapter, frontend, DVB_DEVICE_FRONTEND);
-
-                if (!dev)
-                {
-                    if (!frontend)
-                    {
-                        adapter = -2;
-                    }
-
-                    break;
-                }
-
-                printf("(%d, %d)\n", adapter, frontend);
-            }
+            break;
         }
 
-        auto dev = dvb_dev_seek_by_adapter(dvb, 0, 0, DVB_DEVICE_FRONTEND);
-
-        if (dev)
+        if (bytes < 0)
         {
-            auto open = dvb_dev_open(dvb, dev->sysname, O_RDWR);
-
-            if (open)
+            if (errno != EAGAIN)
             {
-                //print_frontend_stats(dvb->fe_parms);
+                printf("READ: %d\n", errno);
 
-                dvb_dev_close(open);
+                break;
             }
+
+            continue;
         }
+
+        ::write(wr, buffer, bytes);
+
+        total += bytes;
     }
 
-    dvb_dev_free(dvb);
+    delete buffer;
+
+    ::close(wr);
+
+    printf("TOTAL: %d\n", total);
+
+    dvb_dmx_close(data);
+    dvb_fe_close(fe);
 }
