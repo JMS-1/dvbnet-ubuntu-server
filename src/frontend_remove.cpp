@@ -11,15 +11,11 @@ bool Frontend::processRemoveFilter()
     __u16 pid;
 
     if (!readblock(&pid, sizeof(pid)))
-    {
         return false;
-    }
 
     // Nutzung der Verwaltung wurde bereits beendet.
     if (!_active)
-    {
         return false;
-    }
 
     // Entgegennahme beendet.
     if (_filter)
@@ -27,7 +23,7 @@ bool Frontend::processRemoveFilter()
 
 #ifdef DEBUG
     // Protokollierung.
-    ::printf("-filter %d\n", pid);
+    printf("-filter %d\n", pid);
 #endif
 
     return true;

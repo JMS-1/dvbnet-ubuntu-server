@@ -19,26 +19,24 @@ bool Frontend::processTune()
         return false;
 
     // Verwaltung ist noch nicht mit einem Frontend verbunden.
-    if (!_fe)
+    auto fe = const_cast<dvb_v5_fe_parms *>(_fe);
+
+    if (!fe)
         return false;
 
     // Aktiven Filter deaktivieren.
     stopFilter();
 
     // Spannung setzen.
-    auto voltage_err = dvb_fe_sec_voltage(const_cast<dvb_v5_fe_parms *>(_fe), transponder.lnbPower ? 1 : 0, 0);
+    auto voltage_err = dvb_fe_sec_voltage(fe, transponder.lnbPower ? 1 : 0, 0);
 
-#ifdef DEBUG
     // Protokollierung.
     if (voltage_err != 0)
-    {
-        ::printf("can't set LNB voltage: %d (%d)\n", voltage_err, errno);
-    }
-#endif
+        printf("can't set LNB voltage: %d (%d)\n", voltage_err, errno);
 
 #ifdef DEBUG
     // Protokollierung.
-    ::printf("%d/%d connected\n", adapter, frontend);
+    printf("%d/%d connected\n", adapter, frontend);
 #endif
 
     // Standard LNB Konfiguration zuweisen.
@@ -46,30 +44,38 @@ bool Frontend::processTune()
 
     // DiSEqC Steuerung durchführen.
     if (transponder.diseqc >= 1 && transponder.diseqc <= 4)
-    {
         _fe->sat_number = transponder.diseqc - 1;
-    }
 
     // Transponder anwählen.
-    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_DELIVERY_SYSTEM, transponder.s2 ? fe_delivery_system::SYS_DVBS2 : fe_delivery_system::SYS_DVBS);
-    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_FREQUENCY, transponder.frequency);
-    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_MODULATION, transponder.modulation);
-    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_POLARIZATION, transponder.horizontal ? POLARIZATION_H : POLARIZATION_V);
-    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_SYMBOL_RATE, transponder.symbolrate);
-    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_INNER_FEC, transponder.innerFEC);
-    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_ROLLOFF, transponder.rolloff);
+    dvb_fe_store_parm(fe, DTV_DELIVERY_SYSTEM, transponder.s2 ? SYS_DVBS2 : SYS_DVBS);
+    dvb_fe_store_parm(fe, DTV_FREQUENCY, transponder.frequency);
+    dvb_fe_store_parm(fe, DTV_MODULATION, transponder.modulation);
+    dvb_fe_store_parm(fe, DTV_POLARIZATION, transponder.horizontal ? POLARIZATION_H : POLARIZATION_V);
+    dvb_fe_store_parm(fe, DTV_SYMBOL_RATE, transponder.symbolrate);
+    dvb_fe_store_parm(fe, DTV_INNER_FEC, transponder.innerFEC);
+    dvb_fe_store_parm(fe, DTV_ROLLOFF, transponder.rolloff);
 
     // Fehlerbehandlung bewußt deaktiviert.
-    auto tune_err = dvb_fe_set_parms(const_cast<dvb_v5_fe_parms *>(_fe));
+    auto tune_err = dvb_fe_set_parms(fe);
 
-#ifdef DEBUG
     // Protokollierung.
     if (tune_err != 0)
-        ::printf("can't tune: %d (%d)\n", tune_err, errno);
-#endif
+        printf("can't tune: %d (%d)\n", tune_err, errno);
 
     // Eine kleine Pause um sicherzustellen, dass der Vorgang auch abgeschlossen wurde.
-    ::sleep(2);
+    for (int end = ::time(nullptr) + 2; ::time(nullptr) < end; usleep(100))
+    {
+        if (dvb_fe_get_stats(fe))
+            break;
+
+        uint32_t status = 0;
+
+        if (dvb_fe_retrieve_stats(fe, DTV_STATUS, &status))
+            break;
+
+        if (status & FE_HAS_LOCK)
+            break;
+    }
 
     // Filter jetzt erzeugen.
     _filter = new Filter(*this);
@@ -79,7 +85,7 @@ bool Frontend::processTune()
 
 #ifdef DEBUG
     // Protokollierung.
-    ::printf("%d/%d tuned\n", adapter, frontend);
+    printf("%d/%d tuned\n", adapter, frontend);
 #endif
 
     return true;

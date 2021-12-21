@@ -24,15 +24,13 @@ extern "C"
 */
 void Filter::feeder()
 {
-    ThreadTools::signal();
-
 #ifdef DEBUG
     // Protokollausgabe.
-    ::printf("+feeder\n");
+    printf("+feeder\n");
 #endif
 
     // Zusätzlich zu den Nutzdaten muss auch immer die Kontrollstruktur aufgesetzt werden.
-    auto payload = reinterpret_cast<u_char *>(::malloc(2 * SCRATCHSIZE));
+    auto payload = reinterpret_cast<u_char *>(malloc(2 * SCRATCHSIZE));
 
     // Nutzdatenbereich ermitteln.
     auto buffer = payload + SCRATCHSIZE;
@@ -41,7 +39,7 @@ void Filter::feeder()
     ssize_t skipped = 0, total = 0;
     auto overflow = 0;
 
-    for (;;)
+    while (_demux >= 0)
     {
         // Daten aus dem Demultiplexer auslesen.
         auto bytes = read(_demux, buffer + prev, BUFFERSIZE);
@@ -49,11 +47,24 @@ void Filter::feeder()
         // Sobald keine Daten mehr ankommen wird das Auslesen beendet.
         if (bytes < 0)
         {
-            // Es sei denn es wir sind einfach nur zu langsam.
-            if (errno != EOVERFLOW)
-                break;
+            if (errno == EAGAIN)
+            {
+                // Wir sind einfach nur zu schnell.
+                usleep(10);
+            }
+            else if (errno == EOVERFLOW)
+            {
+                // Wir sind einfach nur zu langsam.
+                overflow++;
+            }
+            else
+            {
+                // Hier ist wirklich etwas schief gegangen.
+                if (errno != EBADF)
+                    printf("read error: %d\n", errno);
 
-            overflow++;
+                break;
+            }
 
             continue;
         }
@@ -95,7 +106,7 @@ void Filter::feeder()
                 if (_filters[pid])
                 {
                     // TS Paket übernehmen.
-                    ::memcpy(dest, source, TSPACKETSIZE);
+                    memcpy(dest, source, TSPACKETSIZE);
 
                     dest += TSPACKETSIZE;
                 }
@@ -108,7 +119,7 @@ void Filter::feeder()
         prev = end - source;
 
         if (prev > 0)
-            ::memcpy(buffer, source, prev);
+            memcpy(buffer, source, prev);
 
         // An den Client durchreichen.
         auto send = dest - payload;
@@ -120,11 +131,11 @@ void Filter::feeder()
     }
 
     // Übergabebereich kann nun wieder freigegeben werden.
-    ::free(payload);
+    free(payload);
 
 #ifdef DEBUG
     // Protokollausgabe.
-    ::printf("-feeder (%ld bytes) (%d/%ld)\n", total, overflow, skipped);
+    printf("-feeder (%ld bytes) (%d/%ld)\n", total, overflow, skipped);
 #endif
 }
 
@@ -143,21 +154,21 @@ void Filter::stop()
 
 #ifdef DEBUG
     // Protokollausgabe.
-    ::printf("close filter %d\n", fd);
+    printf("close filter %d\n", fd);
 #endif
 
     // Alle Filter schon mal deaktivieren.
     clearFilter();
 
-    // Verbindung zum Gerät beenden.
-    dvb_dmx_close(fd);
-
     // Entgegennahme der Daten beenden.
     ThreadTools::join(_thread);
 
+    // Verbindung zum Gerät beenden.
+    dvb_dmx_close(fd);
+
 #ifdef DEBUG
     // Protokollausgabe.
-    ::printf("filter stopped\n");
+    printf("filter stopped\n");
 #endif
 }
 
@@ -173,14 +184,17 @@ bool Filter::open()
     _demux = dvb_dmx_open(_frontend.adapter, _frontend.frontend);
 
     if (_demux < 0)
-        return false;
+    {
+        printf("unable to open demux %d/%d: %d\n", _frontend.adapter, _frontend.frontend, errno);
 
-    // Wir wollen aber einen blockierende Zugriff damit wir keine Rechenzeit durch EAGAIN verschwenden.
-    fcntl(_demux, F_SETFL, fcntl(_demux, F_GETFL) & ~O_NONBLOCK);
+        return false;
+    }
 
     // Datenstrom beim Demultiplexer anmelden.
     if (dvb_set_pesfilter(_demux, 0x2000, DMX_PES_OTHER, DMX_OUT_TAP, 10 * 1024 * 1024) != 0)
     {
+        printf("unable to set filter: %d\n", errno);
+
         // Entgegennahme der Daten nicht möglich.
         stop();
 

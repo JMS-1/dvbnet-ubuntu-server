@@ -14,17 +14,13 @@ bool Frontend::processConnect()
 {
     // Verwaltung wird bereits beendet.
     if (!_active)
-    {
         return false;
-    }
 
     // Freies Frontend ermitteln.
     auto manager = _manager;
 
     if (!manager)
-    {
         return false;
-    }
 
     manager->allocate(adapter, frontend);
 
@@ -33,14 +29,11 @@ bool Frontend::processConnect()
 
     if (!_fe)
     {
+        printf("unable to open frontend %d/%d: %d\n", adapter, frontend, errno);
+
         return false;
     }
 
     // Anmeldung bei der Frontendverwaltung.
-    if (!manager->addFrontend(this))
-    {
-        return false;
-    }
-
-    return true;
+    return manager->addFrontend(this);
 }

@@ -27,7 +27,7 @@ bool Frontend::processAddFilter()
 
 #ifdef DEBUG
     // Protokollierung.
-    ::printf("+filter %d\n", pid);
+    printf("+filter %d\n", pid);
 #endif
 
     return true;
