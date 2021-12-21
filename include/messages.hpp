@@ -1,8 +1,6 @@
 #ifndef _DVBNET_MESSAGES_H
 #define _DVBNET_MESSAGES_H 1
 
-#include "diseqc.hpp"
-
 extern "C"
 {
 #include <libdvbv5/dvb-frontend.h>
@@ -12,7 +10,11 @@ extern "C"
 struct SatelliteTune
 {
     // Satellitensteuerung.
-    diseqc_modes lnbMode;
+    __u32 diseqc;
+    __u32 lnb1;
+    __u32 lnb2;
+    __u32 lnbSwitch;
+    bool lnbPower;
     // Transponderbeschreibung.
     fe_modulation modulation;
     __u32 frequency;

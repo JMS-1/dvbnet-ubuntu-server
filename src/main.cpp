@@ -1,5 +1,5 @@
 //#define DUMP_STRUCT_LAYOUT
-#define RUN_TEST
+//#define RUN_TEST
 
 #include <fcntl.h>
 #include <netdb.h>
@@ -30,8 +30,8 @@ int main()
 {
 #ifdef DUMP_STRUCT_LAYOUT
     ::printf(
-        "SatelliteTune\nlnbMode=%d\nlnb1=%d\nlnb2=%d\nlnbSwitch=%d\nlnbPower=%d\nmodulation=%d\nfrequency=%d\nsymbolrate=%d\nhorizontal=%d\ns2=%d\nrolloff=%d\ntotal=%d\n\n",
-        offsetof(SatelliteTune, lnbMode),
+        "SatelliteTune\ndiseqc=%d\nlnb1=%d\nlnb2=%d\nlnbSwitch=%d\nlnbPower=%d\nmodulation=%d\nfrequency=%d\nsymbolrate=%d\nhorizontal=%d\ns2=%d\nrolloff=%d\ntotal=%d\n\n",
+        offsetof(SatelliteTune, diseqc),
         offsetof(SatelliteTune, lnb1),
         offsetof(SatelliteTune, lnb2),
         offsetof(SatelliteTune, lnbSwitch),
@@ -100,7 +100,11 @@ int main()
     ::write(fd, &cr, sizeof(cr));
 
     SatelliteTune rtlplus = {
-        .lnbMode = diseqc_modes::diseqc1,
+        .diseqc = 1,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
         .modulation = fe_modulation::QPSK,
         .frequency = 12187500,
         .symbolrate = 27500000,
@@ -111,7 +115,11 @@ int main()
     };
 
     SatelliteTune zdfhd = {
-        .lnbMode = diseqc_modes::diseqc1,
+        .diseqc = 1,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
         .modulation = fe_modulation::PSK_8,
         .frequency = 11361750,
         .symbolrate = 22000000,
@@ -122,7 +130,11 @@ int main()
     };
 
     SatelliteTune arte = {
-        .lnbMode = diseqc_modes::diseqc1,
+        .diseqc = 1,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
         .modulation = fe_modulation::QPSK,
         .frequency = 10743750,
         .symbolrate = 22000000,
@@ -133,7 +145,11 @@ int main()
     };
 
     SatelliteTune e4p1 = {
-        .lnbMode = diseqc_modes::diseqc2,
+        .diseqc = 2,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
         .modulation = fe_modulation::QPSK,
         .frequency = 10936500,
         .symbolrate = 22000000,
@@ -144,7 +160,11 @@ int main()
     };
 
     SatelliteTune radio = {
-        .lnbMode = diseqc_modes::diseqc1,
+        .diseqc = 1,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
         .modulation = fe_modulation::QPSK,
         .frequency = 12265500,
         .symbolrate = 27500000,
@@ -155,7 +175,11 @@ int main()
     };
 
     SatelliteTune radioNew = {
-        .lnbMode = diseqc_modes::diseqc1,
+        .diseqc = 1,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
         .modulation = fe_modulation::PSK_8,
         .frequency = 10891250,
         .symbolrate = 22000000,
@@ -168,7 +192,7 @@ int main()
     auto tr = frontend_request::tune;
 
     ::write(fd, &tr, sizeof(tr));
-    ::write(fd, &rtlplus, sizeof(SatelliteTune));
+    ::write(fd, &e4p1, sizeof(SatelliteTune));
 
     auto addsect = frontend_request::add_filter;
     __u16 pids[] = {0, 168, 137};

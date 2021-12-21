@@ -92,7 +92,7 @@ void Filter::feeder()
                 auto pidLow = static_cast<__u16>(source[2]);
                 auto pid = ((pidHigh << 8) + pidLow) % sizeof(_filters);
 
-                if (_filters[pid])
+                if (_filters[pid] || true)
                 {
                     // TS Paket übernehmen.
                     ::memcpy(dest, source, TSPACKETSIZE);

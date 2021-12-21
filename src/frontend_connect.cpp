@@ -42,24 +42,5 @@ bool Frontend::processConnect()
         return false;
     }
 
-    // Spannung setzen.
-    auto voltage_err = dvb_fe_sec_voltage(const_cast<dvb_v5_fe_parms *>(_fe), 1, 0);
-
-#ifdef DEBUG
-    // Protokollierung.
-    if (voltage_err != 0)
-    {
-        ::printf("can't set LNB voltage: %d (%d)\n", voltage_err, errno);
-    }
-#endif
-
-#ifdef DEBUG
-    // Protokollierung.
-    ::printf("%d/%d connected\n", adapter, frontend);
-#endif
-
-    // Standard LNB Konfiguration zuweisen.
-    _fe->lnb = dvb_sat_get_lnb(dvb_sat_search_lnb("EXTENDED"));
-
     return true;
 }

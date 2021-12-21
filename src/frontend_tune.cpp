@@ -25,13 +25,36 @@ bool Frontend::processTune()
     // Aktiven Filter deaktivieren.
     stopFilter();
 
-    // Umschaltung vornehmen - Fehlerbehandlung explizit deaktiviert.
-    //diseqc.send(_fd);
+    // Spannung setzen.
+    auto voltage_err = dvb_fe_sec_voltage(const_cast<dvb_v5_fe_parms *>(_fe), transponder.lnbPower ? 1 : 0, 0);
+
+#ifdef DEBUG
+    // Protokollierung.
+    if (voltage_err != 0)
+    {
+        ::printf("can't set LNB voltage: %d (%d)\n", voltage_err, errno);
+    }
+#endif
+
+#ifdef DEBUG
+    // Protokollierung.
+    ::printf("%d/%d connected\n", adapter, frontend);
+#endif
+
+    // Standard LNB Konfiguration zuweisen.
+    _fe->lnb = dvb_sat_get_lnb(dvb_sat_search_lnb("EXTENDED"));
+
+    // DiSEqC Steuerung durchführen.
+    if (transponder.diseqc >= 1 && transponder.diseqc <= 4)
+    {
+        _fe->sat_number = transponder.diseqc - 1;
+    }
 
     // Transponder anwählen.
     dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_DELIVERY_SYSTEM, transponder.s2 ? fe_delivery_system::SYS_DVBS2 : fe_delivery_system::SYS_DVBS);
     dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_FREQUENCY, transponder.frequency);
     dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_MODULATION, transponder.modulation);
+    dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_POLARIZATION, transponder.horizontal ? POLARIZATION_H : POLARIZATION_V);
     dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_SYMBOL_RATE, transponder.symbolrate);
     dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_INNER_FEC, transponder.innerFEC);
     dvb_fe_store_parm(const_cast<dvb_v5_fe_parms *>(_fe), DTV_ROLLOFF, transponder.rolloff);
