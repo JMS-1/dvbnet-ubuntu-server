@@ -63,19 +63,7 @@ bool Frontend::processTune()
         printf("can't tune: %d (%d)\n", tune_err, errno);
 
     // Eine kleine Pause um sicherzustellen, dass der Vorgang auch abgeschlossen wurde.
-    for (int end = ::time(nullptr) + 2; ::time(nullptr) < end; usleep(100))
-    {
-        if (dvb_fe_get_stats(fe))
-            break;
-
-        uint32_t status = 0;
-
-        if (dvb_fe_retrieve_stats(fe, DTV_STATUS, &status))
-            break;
-
-        if (status & FE_HAS_LOCK)
-            break;
-    }
+    sleep(2);
 
     // Filter jetzt erzeugen.
     _filter = new Filter(*this);
