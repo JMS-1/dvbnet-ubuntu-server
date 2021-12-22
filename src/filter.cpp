@@ -191,7 +191,7 @@ bool Filter::open()
     }
 
     // Datenstrom beim Demultiplexer anmelden.
-    if (dvb_set_pesfilter(_demux, 0x2000, DMX_PES_OTHER, DMX_OUT_TAP, 10 * 1024 * 1024) != 0)
+    if (dvb_set_pesfilter(_demux, 0x2000, DMX_PES_OTHER, DMX_OUT_TAP, 10 * 1024 * 1024))
     {
         printf("unable to set filter: %d\n", errno);
 

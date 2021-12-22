@@ -5,6 +5,8 @@
 #include <sys/ioctl.h>
 #include <stdio.h>
 
+#define MIN_STATUS (FE_HAS_CARRIER | FE_HAS_SYNC | FE_HAS_LOCK)
+
 // Frontend auf einen neuen Transponder ausrichten.
 bool Frontend::processTune()
 {
@@ -31,7 +33,7 @@ bool Frontend::processTune()
     auto voltage_err = dvb_fe_sec_voltage(fe, transponder.lnbPower ? 1 : 0, 0);
 
     // Protokollierung.
-    if (voltage_err != 0)
+    if (voltage_err)
         printf("can't set LNB voltage: %d (%d)\n", voltage_err, errno);
 
 #ifdef DEBUG
@@ -44,26 +46,70 @@ bool Frontend::processTune()
 
     // DiSEqC Steuerung durchführen.
     if (transponder.diseqc >= 1 && transponder.diseqc <= 4)
+    {
         _fe->sat_number = transponder.diseqc - 1;
+        _fe->diseqc_wait = 1000;
+    }
+    else
+    {
+        _fe->sat_number = -1;
+        _fe->diseqc_wait = 0;
+    }
+
+    // System setzen.
+    if (dvb_set_sys(fe, transponder.s2 ? SYS_DVBS2 : SYS_DVBS))
+        ::printf("failed to set delivery system: %d\n", errno);
 
     // Transponder anwählen.
-    dvb_fe_store_parm(fe, DTV_DELIVERY_SYSTEM, transponder.s2 ? SYS_DVBS2 : SYS_DVBS);
-    dvb_fe_store_parm(fe, DTV_FREQUENCY, transponder.frequency);
-    dvb_fe_store_parm(fe, DTV_MODULATION, transponder.modulation);
     dvb_fe_store_parm(fe, DTV_POLARIZATION, transponder.horizontal ? POLARIZATION_H : POLARIZATION_V);
+    dvb_fe_store_parm(fe, DTV_FREQUENCY, transponder.frequency);
     dvb_fe_store_parm(fe, DTV_SYMBOL_RATE, transponder.symbolrate);
     dvb_fe_store_parm(fe, DTV_INNER_FEC, transponder.innerFEC);
-    dvb_fe_store_parm(fe, DTV_ROLLOFF, transponder.rolloff);
+    dvb_fe_store_parm(fe, DTV_MODULATION, transponder.modulation);
+    dvb_fe_store_parm(fe, DTV_INVERSION, INVERSION_AUTO);
+
+    if (transponder.s2)
+    {
+        dvb_fe_store_parm(fe, DTV_ROLLOFF, transponder.rolloff);
+        dvb_fe_store_parm(fe, DTV_PILOT, PILOT_AUTO);
+    }
 
     // Fehlerbehandlung bewußt deaktiviert.
     auto tune_err = dvb_fe_set_parms(fe);
 
     // Protokollierung.
-    if (tune_err != 0)
+    if (tune_err)
+    {
         printf("can't tune: %d (%d)\n", tune_err, errno);
 
+        return false;
+    }
+
     // Eine kleine Pause um sicherzustellen, dass der Vorgang auch abgeschlossen wurde.
-    sleep(2);
+    uint32_t status = 0;
+
+    for (int end = ::time(nullptr) + 2; ::time(nullptr) < end; usleep(100))
+    {
+        if (dvb_fe_get_stats(fe))
+        {
+            printf("can no get stats: %d\n", errno);
+
+            break;
+        }
+
+        if (dvb_fe_retrieve_stats(fe, DTV_STATUS, &status))
+        {
+            printf("can no get status: %d\n", errno);
+
+            break;
+        }
+
+        if ((status & MIN_STATUS) == MIN_STATUS)
+            break;
+    }
+
+    if ((status & MIN_STATUS) != MIN_STATUS)
+        printf("no lock %s %d%s: %d\n", transponder.s2 ? "S2" : "S", transponder.frequency, transponder.horizontal ? "H" : "V", status);
 
     // Filter jetzt erzeugen.
     _filter = new Filter(*this);
