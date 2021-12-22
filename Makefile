@@ -26,4 +26,4 @@ $(OBJECTS): $(BUILDDIR)/%.o : $(SOURCEDIR)/%.cpp $(INCLUDES)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	$(RM) $(BUILDDIR)/*.o $(EXE_FNAME)q
+	$(RM) $(BUILDDIR)/*.o $(EXE_FNAME)
