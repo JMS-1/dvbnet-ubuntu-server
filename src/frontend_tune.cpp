@@ -5,7 +5,7 @@
 #include <sys/ioctl.h>
 #include <stdio.h>
 
-#define MIN_STATUS (FE_HAS_CARRIER | FE_HAS_SYNC | FE_HAS_LOCK)
+#define MIN_STATUS (FE_HAS_LOCK)
 
 // Frontend auf einen neuen Transponder ausrichten.
 bool Frontend::processTune()
@@ -46,15 +46,11 @@ bool Frontend::processTune()
 
     // DiSEqC Steuerung durchführen.
     if (transponder.diseqc >= 1 && transponder.diseqc <= 4)
-    {
         _fe->sat_number = transponder.diseqc - 1;
-        _fe->diseqc_wait = 1000;
-    }
     else
-    {
         _fe->sat_number = -1;
-        _fe->diseqc_wait = 0;
-    }
+
+    printf("%d %d %d\n", transponder.diseqc, transponder.horizontal, transponder.frequency >= fe->lnb->rangeswitch * 1000);
 
     // System setzen.
     if (dvb_set_sys(fe, transponder.s2 ? SYS_DVBS2 : SYS_DVBS))
@@ -63,13 +59,13 @@ bool Frontend::processTune()
     // Transponder anwählen.
     dvb_fe_store_parm(fe, DTV_POLARIZATION, transponder.horizontal ? POLARIZATION_H : POLARIZATION_V);
     dvb_fe_store_parm(fe, DTV_FREQUENCY, transponder.frequency);
+    dvb_fe_store_parm(fe, DTV_INVERSION, INVERSION_AUTO);
     dvb_fe_store_parm(fe, DTV_SYMBOL_RATE, transponder.symbolrate);
     dvb_fe_store_parm(fe, DTV_INNER_FEC, transponder.innerFEC);
-    dvb_fe_store_parm(fe, DTV_MODULATION, transponder.modulation);
-    dvb_fe_store_parm(fe, DTV_INVERSION, INVERSION_AUTO);
 
     if (transponder.s2)
     {
+        dvb_fe_store_parm(fe, DTV_MODULATION, transponder.modulation);
         dvb_fe_store_parm(fe, DTV_ROLLOFF, transponder.rolloff);
         dvb_fe_store_parm(fe, DTV_PILOT, PILOT_AUTO);
     }
@@ -88,7 +84,7 @@ bool Frontend::processTune()
     // Eine kleine Pause um sicherzustellen, dass der Vorgang auch abgeschlossen wurde.
     uint32_t status = 0;
 
-    for (int end = ::time(nullptr) + 2; ::time(nullptr) < end; usleep(100))
+    for (int end = ::time(nullptr) + 2; ::time(nullptr) < end; usleep(100000))
     {
         if (dvb_fe_get_stats(fe))
         {
