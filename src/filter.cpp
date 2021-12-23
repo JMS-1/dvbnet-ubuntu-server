@@ -50,7 +50,7 @@ void Filter::feeder()
             if (errno == EAGAIN)
             {
                 // Wir sind einfach nur zu schnell.
-                usleep(10);
+                usleep(10000);
             }
             else if (errno == EOVERFLOW)
             {
