@@ -32,9 +32,9 @@ FrontendManager::FrontendManager() : _active(true), _fd(-1), _listen(nullptr)
 
         while (true)
         {
-            ::sprintf(path, "/dev/dvb/adapter%i/frontend%i", adapter, frontend);
+            sprintf(path, "/dev/dvb/adapter%i/frontend%i", adapter, frontend);
 
-            if (::stat(path, &buffer) == 0)
+            if (stat(path, &buffer) == 0)
                 _available.push_back(makeKey(adapter, frontend++));
             else
                 break;
@@ -48,17 +48,15 @@ FrontendManager::FrontendManager() : _active(true), _fd(-1), _listen(nullptr)
 // Überwacht eingehende Verbindung - jede Verbindung erstellt ein Frontend.
 void FrontendManager::listener()
 {
-    ThreadTools::signal();
-
 #ifdef DEBUG
     // Protokollierung.
-    ::printf("+listen\n");
+    printf("+listen\n");
 #endif
 
     for (;;)
     {
         // Neue Verbindung entgegennehmen.
-        auto fd = ::accept(_fd, nullptr, nullptr);
+        auto fd = accept(_fd, nullptr, nullptr);
 
         if (fd < 0)
             break;
@@ -69,7 +67,7 @@ void FrontendManager::listener()
 
 #ifdef DEBUG
     // Protokollierung.
-    ::printf("-listen\n");
+    printf("-listen\n");
 #endif
 }
 
@@ -80,7 +78,7 @@ bool FrontendManager::listen(in_port_t port /* = 29713 */)
     close();
 
     // Socket anlegen.
-    _fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    _fd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (_fd < 0)
         return false;
@@ -88,11 +86,11 @@ bool FrontendManager::listen(in_port_t port /* = 29713 */)
     // Entgegennahme von Verbindungen vorbereiten.
     sockaddr_in addr = {
         .sin_family = AF_INET,
-        .sin_port = ::htons(port),
-        .sin_addr = {.s_addr = ::htonl(INADDR_ANY)},
+        .sin_port = htons(port),
+        .sin_addr = {.s_addr = htonl(INADDR_ANY)},
         .sin_zero = {0}};
 
-    if (::bind(_fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) != 0)
+    if (bind(_fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) != 0)
     {
         // Im Fehlerfall Verwaltung zurücksetzen.
         close();
@@ -133,7 +131,7 @@ void FrontendManager::close()
 
 #ifdef DEBUG
     // Protokollierung.
-    ::printf("-manager\n");
+    printf("-manager\n");
 #endif
 }
 
@@ -147,7 +145,7 @@ FrontendManager::~FrontendManager()
     _active = false;
 
     if (_fd >= 0)
-        ::shutdown(_fd, SHUT_RD);
+        shutdown(_fd, SHUT_RD);
 
     // Alle verwalteten Frontends beenden.
     for (auto &frontend : _frontends)

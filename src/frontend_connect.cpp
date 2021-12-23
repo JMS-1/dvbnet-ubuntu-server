@@ -14,53 +14,26 @@ bool Frontend::processConnect()
 {
     // Verwaltung wird bereits beendet.
     if (!_active)
-    {
         return false;
-    }
 
     // Freies Frontend ermitteln.
     auto manager = _manager;
 
     if (!manager)
-    {
         return false;
-    }
 
     manager->allocate(adapter, frontend);
 
-    // Dateizugriff erstellen.
-    char path[40];
+    // Zugriff zum Gerät erstellen.
+    _fe = dvb_fe_open(adapter, frontend, 0, 0);
 
-    ::sprintf(path, "/dev/dvb/adapter%i/frontend%i", adapter, frontend);
-
-    _fd = ::open(path, O_RDWR);
-
-    if (_fd < 0)
+    if (!_fe)
     {
+        printf("unable to open frontend %d/%d: %d\n", adapter, frontend, errno);
+
         return false;
     }
 
     // Anmeldung bei der Frontendverwaltung.
-    if (!manager->addFrontend(this))
-    {
-        return false;
-    }
-
-    // Spannung setzen.
-    auto voltage_err = ::ioctl(_fd, FE_SET_VOLTAGE, SEC_VOLTAGE_13);
-
-#ifdef DEBUG
-    // Protokollierung.
-    if (voltage_err != 0)
-    {
-        ::printf("can't set LNB voltage: %d (%d)\n", voltage_err, errno);
-    }
-#endif
-
-#ifdef DEBUG
-    // Protokollierung.
-    ::printf("%d/%d connected\n", adapter, frontend);
-#endif
-
-       return true;
+    return manager->addFrontend(this);
 }

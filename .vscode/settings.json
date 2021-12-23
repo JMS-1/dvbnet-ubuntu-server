@@ -56,6 +56,13 @@
         "cinttypes": "cpp",
         "typeindex": "cpp",
         "typeinfo": "cpp",
-        "cerrno": "cpp"
+        "cerrno": "cpp",
+        "bit": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "numeric": "cpp",
+        "random": "cpp",
+        "ranges": "cpp",
+        "stop_token": "cpp"
     }
 }

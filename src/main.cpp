@@ -8,7 +8,7 @@
 
 #include "manager.hpp"
 
-int readBuffer(int fd, void *buf, int len)
+static int readBuffer(int fd, void *buf, int len)
 {
     auto dest = static_cast<char *>(buf);
 
@@ -30,8 +30,8 @@ int main()
 {
 #ifdef DUMP_STRUCT_LAYOUT
     ::printf(
-        "SatelliteTune\nlnbMode=%d\nlnb1=%d\nlnb2=%d\nlnbSwitch=%d\nlnbPower=%d\nmodulation=%d\nfrequency=%d\nsymbolrate=%d\nhorizontal=%d\ns2=%d\nrolloff=%d\ntotal=%d\n\n",
-        offsetof(SatelliteTune, lnbMode),
+        "SatelliteTune\ndiseqc=%d\nlnb1=%d\nlnb2=%d\nlnbSwitch=%d\nlnbPower=%d\nmodulation=%d\nfrequency=%d\nsymbolrate=%d\nhorizontal=%d\ns2=%d\nrolloff=%d\ntotal=%d\n\n",
+        offsetof(SatelliteTune, diseqc),
         offsetof(SatelliteTune, lnb1),
         offsetof(SatelliteTune, lnb2),
         offsetof(SatelliteTune, lnbSwitch),
@@ -100,7 +100,7 @@ int main()
     ::write(fd, &cr, sizeof(cr));
 
     SatelliteTune rtlplus = {
-        .lnbMode = diseqc_modes::diseqc1,
+        .diseqc = 1,
         .lnb1 = 9750000,
         .lnb2 = 10600000,
         .lnbSwitch = 11700000,
@@ -115,7 +115,7 @@ int main()
     };
 
     SatelliteTune zdfhd = {
-        .lnbMode = diseqc_modes::diseqc1,
+        .diseqc = 1,
         .lnb1 = 9750000,
         .lnb2 = 10600000,
         .lnbSwitch = 11700000,
@@ -130,7 +130,7 @@ int main()
     };
 
     SatelliteTune arte = {
-        .lnbMode = diseqc_modes::diseqc1,
+        .diseqc = 1,
         .lnb1 = 9750000,
         .lnb2 = 10600000,
         .lnbSwitch = 11700000,
@@ -145,7 +145,7 @@ int main()
     };
 
     SatelliteTune e4p1 = {
-        .lnbMode = diseqc_modes::diseqc2,
+        .diseqc = 2,
         .lnb1 = 9750000,
         .lnb2 = 10600000,
         .lnbSwitch = 11700000,
@@ -160,7 +160,7 @@ int main()
     };
 
     SatelliteTune radio = {
-        .lnbMode = diseqc_modes::diseqc1,
+        .diseqc = 1,
         .lnb1 = 9750000,
         .lnb2 = 10600000,
         .lnbSwitch = 11700000,
@@ -174,13 +174,28 @@ int main()
         .rolloff = fe_rolloff::ROLLOFF_AUTO,
     };
 
+    SatelliteTune radioNew = {
+        .diseqc = 1,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
+        .modulation = fe_modulation::PSK_8,
+        .frequency = 10891250,
+        .symbolrate = 22000000,
+        .horizontal = true,
+        .innerFEC = fe_code_rate::FEC_2_3,
+        .s2 = true,
+        .rolloff = fe_rolloff::ROLLOFF_35,
+    };
+
     auto tr = frontend_request::tune;
 
     ::write(fd, &tr, sizeof(tr));
-    ::write(fd, &zdfhd, sizeof(SatelliteTune));
+    ::write(fd, &e4p1, sizeof(SatelliteTune));
 
     auto addsect = frontend_request::add_filter;
-    __u16 pids[] = {18, 6110};
+    __u16 pids[] = {0, 168, 137};
 
     for (auto pid : pids)
     {
@@ -193,7 +208,7 @@ int main()
 
     char buffer[100000];
 
-    for (int end = ::time(nullptr) + 10; ::time(nullptr) < end;)
+    for (int end = ::time(nullptr) + 20; ::time(nullptr) < end;)
     {
         auto bytes = readBuffer(fd, buffer, sizeof(buffer));
 
@@ -213,4 +228,6 @@ int main()
 #endif
 
     manager.run();
+
+    return 0;
 }

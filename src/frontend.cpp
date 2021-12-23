@@ -7,7 +7,7 @@
 // Erstellt eine neue Verwaltung für ein Frontend.
 Frontend::Frontend(int tcp, FrontendManager *manager)
     : _active(true),
-      _fd(-1),
+      _fe(nullptr),
       _filter(nullptr),
       _manager(manager),
       _tcp(tcp),
@@ -17,7 +17,7 @@ Frontend::Frontend(int tcp, FrontendManager *manager)
     // Zwischenspeicher konfigurieren.
     auto buffer = 10 * 1024 * 1024;
 
-    ::setsockopt(_tcp, SOL_SOCKET, SO_SNDBUF, &buffer, sizeof(buffer));
+    setsockopt(_tcp, SOL_SOCKET, SO_SNDBUF, &buffer, sizeof(buffer));
 
     // Beginnt mit der Überwachung von eingegenden Steuermeldungen.
     _listener = new std::thread(&Frontend::waitRequest, this);
@@ -67,11 +67,9 @@ bool Frontend::readblock(void *buffer, int len)
 // Nimmt Steuerbefehle vom Client entgegen.
 void Frontend::waitRequest()
 {
-    ::ThreadTools::signal();
-
 #ifdef DEBUG
     // Protokollierung.
-    ::printf("+%d/%d client\n", adapter, frontend);
+    printf("+%d/%d client\n", adapter, frontend);
 #endif
 
     for (;;)
@@ -114,7 +112,7 @@ void Frontend::waitRequest()
 
 #ifdef DEBUG
     // Protokollierung.
-    ::printf("-%d/%d client\n", adapter, frontend);
+    printf("-%d/%d client\n", adapter, frontend);
 #endif
 
     // Instanz vernichten.
@@ -125,15 +123,15 @@ void Frontend::waitRequest()
 void Frontend::close(bool nowait)
 {
     // Dateihandle zum Frontend schliessen.
-    auto fd = _fd;
+    auto fe = _fe;
 
-    if (fd >= 0)
+    if (fe)
     {
-        _fd = -1;
+        _fe = nullptr;
 
         stopFilter();
 
-        ::close(fd);
+        dvb_fe_close(const_cast<dvb_v5_fe_parms *>(fe));
     }
 
     // Steuerkanal schliessen.
@@ -151,7 +149,7 @@ void Frontend::close(bool nowait)
 
 #ifdef DEBUG
     // Protokollierung.
-    ::printf("%d/%d ended\n", adapter, frontend);
+    printf("%d/%d ended\n", adapter, frontend);
 #endif
 }
 

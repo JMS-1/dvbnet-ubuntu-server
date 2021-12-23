@@ -1,15 +1,16 @@
 #ifndef _DVBNET_MESSAGES_H
 #define _DVBNET_MESSAGES_H 1
 
-#include <linux/dvb/frontend.h>
-
-#include "diseqc.hpp"
+extern "C"
+{
+#include <libdvbv5/dvb-frontend.h>
+}
 
 // Beschreibt einen Transponder.
 struct SatelliteTune
 {
     // Satellitensteuerung.
-    diseqc_modes lnbMode;
+    __u32 diseqc;
     __u32 lnb1;
     __u32 lnb2;
     __u32 lnbSwitch;

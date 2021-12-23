@@ -9,6 +9,11 @@
 
 #include "messages.hpp"
 
+extern "C"
+{
+#include <libdvbv5/dvb-fe.h>
+}
+
 class Filter;
 class FrontendManager;
 
@@ -37,7 +42,7 @@ private:
     // Zugehörige Frontendverwaltung.
     FrontendManager *_manager;
     // Verbindung zum Frontend.
-    volatile int _fd;
+    volatile dvb_v5_fe_parms *_fe;
     // Steuerkanal zum Client.
     volatile int _tcp;
     // Alle angemeldeten Datenströme.

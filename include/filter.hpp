@@ -5,6 +5,7 @@
 
 #include <string.h>
 #include <linux/types.h>
+#include <sys/types.h>
 
 class Frontend;
 
@@ -14,7 +15,7 @@ class Frontend;
 class Filter
 {
 public:
-    Filter(const Frontend &frontend) : _fd(-1), _frontend(frontend), _thread(nullptr) { clearFilter(); }
+    Filter(const Frontend &frontend) : _demux(-1), _frontend(frontend), _thread(nullptr) { clearFilter(); }
     ~Filter() { stop(); }
 
 private:
@@ -23,7 +24,7 @@ private:
     // Zugehöriges Frontend.
     const Frontend &_frontend;
     // Dateihandle zum Demultiplexer.
-    volatile int _fd;
+    volatile int _demux;
     // Instanz für die Datenweitergabe.
     std::thread *_thread;
 

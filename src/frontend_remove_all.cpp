@@ -2,14 +2,14 @@
 
 #include "filter.hpp"
 
+#include <stdio.h>
+
 // Beendet die Entgegennahme aller Datenströme.
 bool Frontend::processRemoveAllFilters()
 {
     // Nutzung der Verwaltung wurde bereits beendet.
     if (!_active)
-    {
         return false;
-    }
 
     // Entgegennahme beenden.
     if (_filter)
@@ -17,7 +17,7 @@ bool Frontend::processRemoveAllFilters()
 
 #ifdef DEBUG
     // Protokollierung.
-    ::printf("-all filters\n");
+    printf("-all filters\n");
 #endif
 
     return true;
