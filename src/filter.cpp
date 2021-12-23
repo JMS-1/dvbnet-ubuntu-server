@@ -50,7 +50,7 @@ void Filter::feeder()
             if (errno == EAGAIN)
             {
                 // Wir sind einfach nur zu schnell.
-                usleep(10000);
+                usleep(1000);
             }
             else if (errno == EOVERFLOW)
             {
@@ -133,10 +133,11 @@ void Filter::feeder()
     // Übergabebereich kann nun wieder freigegeben werden.
     free(payload);
 
-#ifdef DEBUG
-    // Protokollausgabe.
-    printf("-feeder (%ld bytes) (%d/%ld)\n", total, overflow, skipped);
+    // Protocollausgabe.
+#ifndef DEBUG
+    if (overflow > 0 || skipped > 0)
 #endif
+        printf("-feeder (%ld bytes) (%d/%ld)\n", total, overflow, skipped);
 }
 
 /*
