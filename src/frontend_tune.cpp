@@ -50,8 +50,6 @@ bool Frontend::processTune()
     else
         _fe->sat_number = -1;
 
-    printf("%d %d %d\n", transponder.diseqc, transponder.horizontal, transponder.frequency >= fe->lnb->rangeswitch * 1000);
-
     // System setzen.
     if (dvb_set_sys(fe, transponder.s2 ? SYS_DVBS2 : SYS_DVBS))
         ::printf("failed to set delivery system: %d\n", errno);
