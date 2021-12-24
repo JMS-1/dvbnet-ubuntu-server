@@ -7,7 +7,7 @@
 // Erstellt eine neue Verwaltung für ein Frontend.
 Frontend::Frontend(int tcp, FrontendManager *manager)
     : _active(true),
-      _fe(nullptr),
+      _fd(-1),
       _filter(nullptr),
       _manager(manager),
       _tcp(tcp),
@@ -67,6 +67,8 @@ bool Frontend::readblock(void *buffer, int len)
 // Nimmt Steuerbefehle vom Client entgegen.
 void Frontend::waitRequest()
 {
+    ThreadTools::signal();
+
 #ifdef DEBUG
     // Protokollierung.
     printf("+%d/%d client\n", adapter, frontend);
@@ -123,15 +125,15 @@ void Frontend::waitRequest()
 void Frontend::close(bool nowait)
 {
     // Dateihandle zum Frontend schliessen.
-    auto fe = _fe;
+    auto fd = _fd;
 
-    if (fe)
+    if (fd >= 0)
     {
-        _fe = nullptr;
+        _fd = -1;
 
         stopFilter();
 
-        dvb_fe_close(const_cast<dvb_v5_fe_parms *>(fe));
+        ::close(fd);
     }
 
     // Steuerkanal schliessen.

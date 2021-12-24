@@ -8,7 +8,7 @@
 
 #include "manager.hpp"
 
-static int readBuffer(int fd, void *buf, int len)
+int readBuffer(int fd, void *buf, int len)
 {
     auto dest = static_cast<char *>(buf);
 
@@ -29,9 +29,9 @@ static int readBuffer(int fd, void *buf, int len)
 int main()
 {
 #ifdef DUMP_STRUCT_LAYOUT
-    ::printf(
-        "SatelliteTune\ndiseqc=%d\nlnb1=%d\nlnb2=%d\nlnbSwitch=%d\nlnbPower=%d\nmodulation=%d\nfrequency=%d\nsymbolrate=%d\nhorizontal=%d\ns2=%d\nrolloff=%d\ntotal=%d\n\n",
-        offsetof(SatelliteTune, diseqc),
+    printf(
+        "SatelliteTune\nlnbMode=%d\nlnb1=%d\nlnb2=%d\nlnbSwitch=%d\nlnbPower=%d\nmodulation=%d\nfrequency=%d\nsymbolrate=%d\nhorizontal=%d\ns2=%d\nrolloff=%d\ntotal=%d\n\n",
+        offsetof(SatelliteTune, lnbMode),
         offsetof(SatelliteTune, lnb1),
         offsetof(SatelliteTune, lnb2),
         offsetof(SatelliteTune, lnbSwitch),
@@ -44,13 +44,13 @@ int main()
         offsetof(SatelliteTune, rolloff),
         sizeof(SatelliteTune));
 
-    ::printf(
+    printf(
         "connect_request\nadapter=%d\nfrontend=%d\ntotal=%d\n\n",
         offsetof(connect_request, adapter),
         offsetof(connect_request, frontend),
         sizeof(connect_request));
 
-    ::printf(
+    printf(
         "signal_response\nstatus=%d\nsnr=%d\nstrength=%d\nber=%d\ntotal=%d\n\n",
         offsetof(signal_response, status),
         offsetof(signal_response, snr),
@@ -58,7 +58,7 @@ int main()
         offsetof(signal_response, ber),
         sizeof(signal_response));
 
-    ::printf(
+    printf(
         "response\ntype=%d\npid=%d\nlen=%d\ntotal=%d\n\n",
         offsetof(response, type),
         offsetof(response, pid),
@@ -68,7 +68,7 @@ int main()
     auto test = 0x01020304;
     auto test_ptr = reinterpret_cast<char *>(&test);
 
-    ::printf("%d %d %d %d\n", test_ptr[0], test_ptr[1], test_ptr[2], test_ptr[3]);
+    printf("%d %d %d %d\n", test_ptr[0], test_ptr[1], test_ptr[2], test_ptr[3]);
 #endif
 
     FrontendManager manager;
@@ -78,14 +78,14 @@ int main()
         ::exit(1);
     }
 
-    ::printf("listener started\n");
+    printf("listener started\n");
 
 #ifdef RUN_TEST
     auto server = ::gethostbyname("localhost");
 
     sockaddr_in addr = {.sin_family = AF_INET, .sin_port = ::htons(29713), {0}};
 
-    ::memcpy(&addr.sin_addr.s_addr, server->h_addr, server->h_length);
+    memcpy(&addr.sin_addr.s_addr, server->h_addr, server->h_length);
 
     auto fd = socket(AF_INET, SOCK_STREAM, 0);
     auto err = ::connect(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
@@ -100,7 +100,7 @@ int main()
     ::write(fd, &cr, sizeof(cr));
 
     SatelliteTune rtlplus = {
-        .diseqc = 1,
+        .lnbMode = diseqc_modes::diseqc1,
         .lnb1 = 9750000,
         .lnb2 = 10600000,
         .lnbSwitch = 11700000,
@@ -115,7 +115,7 @@ int main()
     };
 
     SatelliteTune zdfhd = {
-        .diseqc = 1,
+        .lnbMode = diseqc_modes::diseqc1,
         .lnb1 = 9750000,
         .lnb2 = 10600000,
         .lnbSwitch = 11700000,
@@ -130,7 +130,7 @@ int main()
     };
 
     SatelliteTune arte = {
-        .diseqc = 1,
+        .lnbMode = diseqc_modes::diseqc1,
         .lnb1 = 9750000,
         .lnb2 = 10600000,
         .lnbSwitch = 11700000,
@@ -145,7 +145,7 @@ int main()
     };
 
     SatelliteTune e4p1 = {
-        .diseqc = 2,
+        .lnbMode = diseqc_modes::diseqc2,
         .lnb1 = 9750000,
         .lnb2 = 10600000,
         .lnbSwitch = 11700000,
@@ -160,7 +160,7 @@ int main()
     };
 
     SatelliteTune radio = {
-        .diseqc = 1,
+        .lnbMode = diseqc_modes::diseqc1,
         .lnb1 = 9750000,
         .lnb2 = 10600000,
         .lnbSwitch = 11700000,
@@ -174,28 +174,13 @@ int main()
         .rolloff = fe_rolloff::ROLLOFF_AUTO,
     };
 
-    SatelliteTune radioNew = {
-        .diseqc = 1,
-        .lnb1 = 9750000,
-        .lnb2 = 10600000,
-        .lnbSwitch = 11700000,
-        .lnbPower = true,
-        .modulation = fe_modulation::PSK_8,
-        .frequency = 10891250,
-        .symbolrate = 22000000,
-        .horizontal = true,
-        .innerFEC = fe_code_rate::FEC_2_3,
-        .s2 = true,
-        .rolloff = fe_rolloff::ROLLOFF_35,
-    };
-
     auto tr = frontend_request::tune;
 
     ::write(fd, &tr, sizeof(tr));
-    ::write(fd, &e4p1, sizeof(SatelliteTune));
+    ::write(fd, &rtlplus, sizeof(SatelliteTune));
 
     auto addsect = frontend_request::add_filter;
-    __u16 pids[] = {0, 168, 137};
+    __u16 pids[] = {18, 6110};
 
     for (auto pid : pids)
     {
@@ -228,6 +213,4 @@ int main()
 #endif
 
     manager.run();
-
-    return 0;
 }

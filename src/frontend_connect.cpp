@@ -24,16 +24,24 @@ bool Frontend::processConnect()
 
     manager->allocate(adapter, frontend);
 
-    // Zugriff zum Gerät erstellen.
-    _fe = dvb_fe_open(adapter, frontend, 0, 0);
+    // Dateizugriff erstellen.
+    char path[40];
 
-    if (!_fe)
-    {
-        printf("unable to open frontend %d/%d: %d\n", adapter, frontend, errno);
+    sprintf(path, "/dev/dvb/adapter%i/frontend%i", adapter, frontend);
 
+    _fd = open(path, O_RDWR);
+
+    if (_fd < 0)
         return false;
-    }
 
     // Anmeldung bei der Frontendverwaltung.
-    return manager->addFrontend(this);
+    if (!manager->addFrontend(this))
+        return false;
+
+#ifdef DEBUG
+    // Protokollierung.
+    printf("%d/%d connected\n", adapter, frontend);
+#endif
+
+    return true;
 }

@@ -2,16 +2,13 @@
 
 #include <fcntl.h>
 #include <string.h>
+#include <linux/dvb/dmx.h>
 #include <sys/ioctl.h>
+#include <stdio.h>
 #include <malloc.h>
 
 #include "frontend.hpp"
 #include "threadTools.hpp"
-
-extern "C"
-{
-#include <libdvbv5/dvb-demux.h>
-}
 
 #define TSPACKETSIZE 188
 #define TSMAGICBYTE 0x47
@@ -24,6 +21,8 @@ extern "C"
 */
 void Filter::feeder()
 {
+    ThreadTools::signal();
+
 #ifdef DEBUG
     // Protokollausgabe.
     printf("+feeder\n");
@@ -39,32 +38,19 @@ void Filter::feeder()
     ssize_t skipped = 0, total = 0;
     auto overflow = 0;
 
-    while (_demux >= 0)
+    for (;;)
     {
         // Daten aus dem Demultiplexer auslesen.
-        auto bytes = read(_demux, buffer + prev, BUFFERSIZE);
+        auto bytes = read(_fd, buffer + prev, BUFFERSIZE);
 
         // Sobald keine Daten mehr ankommen wird das Auslesen beendet.
         if (bytes < 0)
         {
-            if (errno == EAGAIN)
-            {
-                // Wir sind einfach nur zu schnell.
-                usleep(1000);
-            }
-            else if (errno == EOVERFLOW)
-            {
-                // Wir sind einfach nur zu langsam.
-                overflow++;
-            }
-            else
-            {
-                // Hier ist wirklich etwas schief gegangen.
-                if (errno != EBADF)
-                    printf("read error: %d\n", errno);
-
+            // Es sei denn wir sind einfach nur zu langsam.
+            if (errno != EOVERFLOW)
                 break;
-            }
+
+            overflow++;
 
             continue;
         }
@@ -133,11 +119,10 @@ void Filter::feeder()
     // Übergabebereich kann nun wieder freigegeben werden.
     free(payload);
 
-    // Protocollausgabe.
-#ifndef DEBUG
-    if (overflow > 0 || skipped > 0)
+#ifdef DEBUG
+    // Protokollausgabe.
+    printf("-feeder (%ld bytes) (%d/%ld)\n", total, overflow, skipped);
 #endif
-        printf("-feeder (%ld bytes) (%d/%ld)\n", total, overflow, skipped);
 }
 
 /*
@@ -146,12 +131,12 @@ void Filter::feeder()
 void Filter::stop()
 {
     // Dateizugriff beenden.
-    const auto fd = _demux;
+    const auto fd = _fd;
 
     if (fd < 0)
         return;
 
-    _demux = -1;
+    _fd = -1;
 
 #ifdef DEBUG
     // Protokollausgabe.
@@ -161,11 +146,11 @@ void Filter::stop()
     // Alle Filter schon mal deaktivieren.
     clearFilter();
 
+    // Verbindung zum Gerät beenden.
+    ::close(fd);
+
     // Entgegennahme der Daten beenden.
     ThreadTools::join(_thread);
-
-    // Verbindung zum Gerät beenden.
-    dvb_dmx_close(fd);
 
 #ifdef DEBUG
     // Protokollausgabe.
@@ -182,20 +167,34 @@ bool Filter::open()
     stop();
 
     // Dateihanlde anlegen.
-    _demux = dvb_dmx_open(_frontend.adapter, _frontend.frontend);
+    char path[40];
 
-    if (_demux < 0)
-    {
-        printf("unable to open demux %d/%d: %d\n", _frontend.adapter, _frontend.frontend, errno);
+    sprintf(path, "/dev/dvb/adapter%i/demux%i", _frontend.adapter, _frontend.frontend);
 
+    _fd = ::open(path, O_RDWR);
+
+    if (_fd < 0)
         return false;
-    }
+
+    // Vergrößerten Zwischenspeicher anlegen.
+    auto buf_err = ioctl(_fd, DMX_SET_BUFFER_SIZE, 10 * 1024 * 1024);
+
+#ifdef DEBUG
+    // Protokollierung.
+    if (buf_err != 0)
+        printf("can't set buffer: %d\n", errno);
+#endif
 
     // Datenstrom beim Demultiplexer anmelden.
-    if (dvb_set_pesfilter(_demux, 0x2000, DMX_PES_OTHER, DMX_OUT_TAP, 10 * 1024 * 1024))
-    {
-        printf("unable to set filter: %d\n", errno);
+    dmx_pes_filter_params filter = {
+        .pid = 0x2000,
+        .input = dmx_input::DMX_IN_FRONTEND,
+        .output = dmx_output::DMX_OUT_TAP,
+        .pes_type = dmx_ts_pes::DMX_PES_OTHER,
+        .flags = DMX_IMMEDIATE_START};
 
+    if (ioctl(_fd, DMX_SET_PES_FILTER, &filter) != 0)
+    {
         // Entgegennahme der Daten nicht möglich.
         stop();
 

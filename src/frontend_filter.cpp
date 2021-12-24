@@ -1,8 +1,8 @@
+#include <stdio.h>
+
 #include "frontend.hpp"
 
 #include "filter.hpp"
-
-#include <stdio.h>
 
 // Aktiviert den Empfang von Kontrolldaten.
 bool Frontend::processAddFilter()
@@ -11,15 +11,11 @@ bool Frontend::processAddFilter()
     __u16 pid;
 
     if (!readblock(&pid, sizeof(pid)))
-    {
         return false;
-    }
 
     // Verwaltung ist bereits beendet.
     if (!_active)
-    {
         return false;
-    }
 
     // Aktivieren.
     if (_filter)

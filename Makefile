@@ -10,7 +10,7 @@ EXE_FNAME = $(BUILDDIR)/dvb_proxy
  
 # CXXFLAGS += $(INCLUDEDIR:%=-I%) -std=c++11 -pthread -DDEBUG -g
 CXXFLAGS += $(INCLUDEDIR:%=-I%) -std=c++11 -pthread
-LDFLAGS += -pthread -ldvbv5
+LDFLAGS += -pthread
 
 .PHONY: build clean
  
