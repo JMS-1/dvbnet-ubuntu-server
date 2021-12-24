@@ -4,6 +4,8 @@
 #include <string.h>
 #include <linux/dvb/dmx.h>
 #include <sys/ioctl.h>
+#include <stdio.h>
+#include <malloc.h>
 
 #include "frontend.hpp"
 #include "threadTools.hpp"
@@ -87,7 +89,7 @@ void Filter::feeder()
                 auto pidLow = static_cast<__u16>(source[2]);
                 auto pid = ((pidHigh << 8) + pidLow) % sizeof(_filters);
 
-                if (_filters[pid])
+                if (_filters[pid] || true)
                 {
                     // TS Paket übernehmen.
                     ::memcpy(dest, source, TSPACKETSIZE);

@@ -51,7 +51,7 @@ bool Frontend::processConnect()
 
 #ifdef DEBUG
     // Protokollierung.
-    if (voltage_err != 0)
+    if (voltage_err)
     {
         ::printf("can't set LNB voltage: %d (%d)\n", voltage_err, errno);
     }
@@ -62,5 +62,5 @@ bool Frontend::processConnect()
     ::printf("%d/%d connected\n", adapter, frontend);
 #endif
 
-       return true;
+    return true;
 }

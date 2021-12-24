@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "frontend.hpp"
 
 #include "filter.hpp"

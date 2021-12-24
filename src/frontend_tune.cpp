@@ -1,8 +1,11 @@
+#include <sys/ioctl.h>
+#include <stdio.h>
+
 #include "frontend.hpp"
 
 #include "filter.hpp"
 
-#include <sys/ioctl.h>
+#include <libdvbv5/dvb-dev.h>
 
 // Frontend auf einen neuen Transponder ausrichten.
 bool Frontend::processTune()
@@ -23,6 +26,16 @@ bool Frontend::processTune()
 
     // Aktiven Filter deaktivieren.
     stopFilter();
+
+    dvb_frontend_info info = {0};
+    printf("%d\n", ::ioctl(_fd, FE_GET_INFO, &info));
+
+    dvb_frontend_parameters fe = {0};
+    printf("%d\n", ::ioctl(_fd, FE_GET_FRONTEND, &fe));
+
+    // Fehlerbehandlung bewußt deaktiviert.
+    printf("%d\n", ::ioctl(_fd, FE_SET_TONE, SEC_TONE_OFF));
+    printf("%d\n", ::ioctl(_fd, FE_ENABLE_HIGH_LNB_VOLTAGE, 1));
 
     // DiSEqC Steuerung durchführen.
     auto useSwitch = (transponder.lnbMode >= diseqc_modes::diseqc1) && (transponder.lnbMode <= diseqc_modes::diseqc4);
@@ -49,12 +62,11 @@ bool Frontend::processTune()
     struct dtv_properties dtv_prop = {
         .num = sizeof(props) / sizeof(props[0]), .props = props};
 
-    // Fehlerbehandlung bewußt deaktiviert.
     auto tune_err = ::ioctl(_fd, FE_SET_PROPERTY, &dtv_prop);
 
 #ifdef DEBUG
     // Protokollierung.
-    if (tune_err != 0)
+    if (tune_err)
         ::printf("can't tune: %d (%d)\n", tune_err, errno);
 #endif
 

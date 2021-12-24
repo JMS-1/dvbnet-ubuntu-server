@@ -6,6 +6,7 @@
 
 #include <linux/dvb/frontend.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 
 /*
     Übermittelt einen DiSEqC Steuerbefehl an ein Frontend.
@@ -31,7 +32,7 @@ void DiSEqCMessage::send(int fd)
 
 #ifdef DEBUG
     // Protokollierung.
-    if (err != 0)
+    if (err)
         ::printf("DiSEqC error %d (%d)\n", err, errno);
 #endif
 }

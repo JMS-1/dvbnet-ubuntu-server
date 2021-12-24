@@ -1,5 +1,5 @@
 //#define DUMP_STRUCT_LAYOUT
-//#define RUN_TEST
+#define RUN_TEST
 
 #include <fcntl.h>
 #include <netdb.h>
