@@ -33,20 +33,8 @@ bool Frontend::processTune()
     auto loFreq = useSwitch && transponder.frequency < transponder.lnbSwitch;
     auto freq = transponder.frequency - (hiFreq ? transponder.lnb2 : 0) - (loFreq ? transponder.lnb1 : 0);
 
-    DiSEqCMessage diseqc(DiSEqCMessage::create(transponder.lnbMode, hiFreq, transponder.horizontal));
-
     // Umschaltung vornehmen - Fehlerbehandlung explizit deaktiviert.
-    ioctl(_fd, FE_SET_TONE, SEC_TONE_OFF);
-    ioctl(_fd, FE_SET_VOLTAGE, transponder.horizontal ? SEC_VOLTAGE_18 : SEC_VOLTAGE_13);
-    usleep(15000);
-
-    diseqc.send(_fd);
-
-    usleep(15000);
-    ioctl(_fd, FE_DISEQC_SEND_BURST, transponder.lnbMode == diseqc_modes::diseqc2 || transponder.lnbMode == diseqc_modes::diseqc4 ? SEC_MINI_B : SEC_MINI_A);
-
-    usleep(15000);
-    ioctl(_fd, FE_SET_TONE, hiFreq ? SEC_TONE_ON : SEC_TONE_OFF);
+    DiSEqCMessage::send(transponder.lnbMode, hiFreq, transponder.horizontal, _fd);
 
     // Transponder anwählen.
     struct dtv_property props[] =

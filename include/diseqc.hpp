@@ -23,7 +23,13 @@ enum diseqc_modes
 */
 class DiSEqCMessage
 {
+protected:
+    // Erzeugt eine Burst-Mode Steuermeldung.
+    DiSEqCMessage() : burst(false), repeat(0) {}
+
 public:
+    virtual ~DiSEqCMessage() {}
+
     // Erzeugt eine Burst-Mode Steuermeldung.
     DiSEqCMessage(bool burst) : burst(burst), repeat(0) {}
 
@@ -46,11 +52,11 @@ private:
 
 public:
     // Überträgt die Meldung an ein Frontend.
-    void send(int fd);
+    virtual void _send(int fd);
 
 public:
     // Erstellt eine neue Steuermeldung.
-    static DiSEqCMessage create(diseqc_modes mode, bool highFrequency, bool horizontal);
+    static void send(diseqc_modes mode, bool highFrequency, bool horizontal, int fe);
 };
 
 #endif

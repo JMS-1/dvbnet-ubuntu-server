@@ -177,7 +177,7 @@ int main()
     auto tr = frontend_request::tune;
 
     ::write(fd, &tr, sizeof(tr));
-    ::write(fd, &zdfhd, sizeof(SatelliteTune));
+    ::write(fd, &rtlplus, sizeof(SatelliteTune));
 
     auto addsect = frontend_request::add_filter;
     __u16 pids[] = {18, 6110};
