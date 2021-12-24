@@ -89,7 +89,7 @@ void Filter::feeder()
                 auto pidLow = static_cast<__u16>(source[2]);
                 auto pid = ((pidHigh << 8) + pidLow) % sizeof(_filters);
 
-                if (_filters[pid] || true)
+                if (_filters[pid])
                 {
                     // TS Paket übernehmen.
                     ::memcpy(dest, source, TSPACKETSIZE);
@@ -177,7 +177,7 @@ bool Filter::open()
         return false;
 
     // Vergrößerten Zwischenspeicher anlegen.
-    auto buf_err = ::ioctl(_fd, DMX_SET_BUFFER_SIZE, 10 * 1024 * 1024);
+    auto buf_err = ioctl(_fd, DMX_SET_BUFFER_SIZE, 10 * 1024 * 1024);
 
 #ifdef DEBUG
     // Protokollierung.
@@ -193,7 +193,7 @@ bool Filter::open()
         .pes_type = dmx_ts_pes::DMX_PES_OTHER,
         .flags = DMX_IMMEDIATE_START};
 
-    if (::ioctl(_fd, DMX_SET_PES_FILTER, &filter) != 0)
+    if (ioctl(_fd, DMX_SET_PES_FILTER, &filter) != 0)
     {
         // Entgegennahme der Daten nicht möglich.
         stop();

@@ -22,12 +22,12 @@ void DiSEqCMessage::send(int fd)
 
         ::memcpy(cmd.msg, _message, cmd.msg_len);
 
-        err = ::ioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd);
+        err = ioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd);
     }
     else
     {
         // Burst-Mode Umschaltung.
-        err = ::ioctl(fd, FE_DISEQC_SEND_BURST, burst ? fe_sec_mini_cmd::SEC_MINI_B : fe_sec_mini_cmd::SEC_MINI_A);
+        err = ioctl(fd, FE_DISEQC_SEND_BURST, burst ? fe_sec_mini_cmd::SEC_MINI_B : fe_sec_mini_cmd::SEC_MINI_A);
     }
 
 #ifdef DEBUG

@@ -46,17 +46,6 @@ bool Frontend::processConnect()
         return false;
     }
 
-    // Spannung setzen.
-    auto voltage_err = ::ioctl(_fd, FE_SET_VOLTAGE, SEC_VOLTAGE_13);
-
-#ifdef DEBUG
-    // Protokollierung.
-    if (voltage_err)
-    {
-        ::printf("can't set LNB voltage: %d (%d)\n", voltage_err, errno);
-    }
-#endif
-
 #ifdef DEBUG
     // Protokollierung.
     ::printf("%d/%d connected\n", adapter, frontend);

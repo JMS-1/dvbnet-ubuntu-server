@@ -27,16 +27,6 @@ bool Frontend::processTune()
     // Aktiven Filter deaktivieren.
     stopFilter();
 
-    dvb_frontend_info info = {0};
-    printf("%d\n", ::ioctl(_fd, FE_GET_INFO, &info));
-
-    dvb_frontend_parameters fe = {0};
-    printf("%d\n", ::ioctl(_fd, FE_GET_FRONTEND, &fe));
-
-    // Fehlerbehandlung bewußt deaktiviert.
-    printf("%d\n", ::ioctl(_fd, FE_SET_TONE, SEC_TONE_OFF));
-    printf("%d\n", ::ioctl(_fd, FE_ENABLE_HIGH_LNB_VOLTAGE, 1));
-
     // DiSEqC Steuerung durchführen.
     auto useSwitch = (transponder.lnbMode >= diseqc_modes::diseqc1) && (transponder.lnbMode <= diseqc_modes::diseqc4);
     auto hiFreq = useSwitch && transponder.frequency >= transponder.lnbSwitch;
@@ -46,7 +36,17 @@ bool Frontend::processTune()
     DiSEqCMessage diseqc(DiSEqCMessage::create(transponder.lnbMode, hiFreq, transponder.horizontal));
 
     // Umschaltung vornehmen - Fehlerbehandlung explizit deaktiviert.
+    ioctl(_fd, FE_SET_TONE, SEC_TONE_OFF);
+    ioctl(_fd, FE_SET_VOLTAGE, transponder.horizontal ? SEC_VOLTAGE_18 : SEC_VOLTAGE_13);
+    usleep(15000);
+
     diseqc.send(_fd);
+
+    usleep(15000);
+    ioctl(_fd, FE_DISEQC_SEND_BURST, transponder.lnbMode == diseqc_modes::diseqc2 || transponder.lnbMode == diseqc_modes::diseqc4 ? SEC_MINI_B : SEC_MINI_A);
+
+    usleep(15000);
+    ioctl(_fd, FE_SET_TONE, hiFreq ? SEC_TONE_ON : SEC_TONE_OFF);
 
     // Transponder anwählen.
     struct dtv_property props[] =
@@ -62,7 +62,7 @@ bool Frontend::processTune()
     struct dtv_properties dtv_prop = {
         .num = sizeof(props) / sizeof(props[0]), .props = props};
 
-    auto tune_err = ::ioctl(_fd, FE_SET_PROPERTY, &dtv_prop);
+    auto tune_err = ioctl(_fd, FE_SET_PROPERTY, &dtv_prop);
 
 #ifdef DEBUG
     // Protokollierung.
