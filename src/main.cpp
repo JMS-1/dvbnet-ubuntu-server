@@ -174,10 +174,25 @@ int main()
         .rolloff = fe_rolloff::ROLLOFF_AUTO,
     };
 
+    SatelliteTune pro7 = {
+        .lnbMode = diseqc_modes::diseqc1,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
+        .modulation = fe_modulation::QPSK,
+        .frequency = 12544750,
+        .symbolrate = 22000000,
+        .horizontal = true,
+        .innerFEC = fe_code_rate::FEC_5_6,
+        .s2 = false,
+        .rolloff = fe_rolloff::ROLLOFF_AUTO,
+    };
+
     auto tr = frontend_request::tune;
 
     ::write(fd, &tr, sizeof(tr));
-    ::write(fd, &rtlplus, sizeof(SatelliteTune));
+    ::write(fd, &pro7, sizeof(SatelliteTune));
 
     auto addsect = frontend_request::add_filter;
     __u16 pids[] = {18, 6110};
