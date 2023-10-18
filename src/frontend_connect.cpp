@@ -4,6 +4,7 @@
 #include "manager.hpp"
 
 #include <fcntl.h>
+#include <stdio.h>
 #include <sys/ioctl.h>
 
 /*

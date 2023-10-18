@@ -1,8 +1,11 @@
-//#define DUMP_STRUCT_LAYOUT
-//#define RUN_TEST
+// #define DUMP_STRUCT_LAYOUT
+// #define RUN_TEST
+
+#include <cstdlib>
 
 #include <fcntl.h>
 #include <netdb.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
