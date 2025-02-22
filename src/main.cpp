@@ -154,12 +154,27 @@ int main()
         .lnbSwitch = 11700000,
         .lnbPower = true,
         .modulation = fe_modulation::QPSK,
-        .frequency = 10936500,
+        .frequency = 10714000,
         .symbolrate = 22000000,
-        .horizontal = false,
+        .horizontal = true,
         .innerFEC = fe_code_rate::FEC_5_6,
         .s2 = false,
         .rolloff = fe_rolloff::ROLLOFF_AUTO,
+    };
+
+    SatelliteTune trueCrime = {
+        .lnbMode = diseqc_modes::diseqc2,
+        .lnb1 = 9750000,
+        .lnb2 = 10600000,
+        .lnbSwitch = 11700000,
+        .lnbPower = true,
+        .modulation = fe_modulation::PSK_8,
+        .frequency = 11343500,
+        .symbolrate = 27500000,
+        .horizontal = false,
+        .innerFEC = fe_code_rate::FEC_2_3,
+        .s2 = true,
+        .rolloff = fe_rolloff::ROLLOFF_35,
     };
 
     SatelliteTune radio = {
@@ -198,7 +213,7 @@ int main()
     ::write(fd, &pro7, sizeof(SatelliteTune));
 
     auto addsect = frontend_request::add_filter;
-    __u16 pids[] = {18, 6110};
+    __u16 pids[] = {18, 511};
 
     for (auto pid : pids)
     {
